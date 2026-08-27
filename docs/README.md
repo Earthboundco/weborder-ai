@@ -14,7 +14,6 @@ without re-deriving everything from scratch. Read these in order:
    Append to this, don't rewrite history.
 
 ## Quick facts
-- DB server: `192.168.1.231:1433` (SQL Server 2008 R2). Credentials in `.env` (not committed).
 - Our schema/database to build in: `EBTAI` (empty when we started - now holds the tables/views
   described in `data-sources.md`).
 - Read access to `EBT` (the real operational DB - 813 tables/views) and `EBTGOOGLE`. No access to
