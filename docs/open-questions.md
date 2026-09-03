@@ -6,14 +6,19 @@ Things we don't have answers for yet. Don't guess at these - ask Netto/Wesley.
   priority order (A1, A2, A3, B, C, D, E); the moment a store can't be fully covered, allocation
   stops entirely (no partial-fill, no skipping ahead). Implemented in `usp_RunAllocation`. Two
   smaller things from implementing this are still open:
-  - **Tie-break within the same group.** Netto didn't specify ordering among stores that share
-    a group letter (e.g. several stores are all "A2"). We used StoreCode ascending as a
-    deterministic default - not confirmed as the right one.
+  - **Tie-break within the same group.** ~~Netto didn't specify ordering~~ **Approach resolved
+    2026-09-03** by Wesley: he'll provide an explicit store rank/priority list to use instead of
+    the StoreCode-ascending guess. **Not yet delivered** - still waiting on the actual list from
+    Wesley. Keep StoreCode ascending as the placeholder until it arrives, then swap in his rank.
   - **5 stores have no Pattern_Store_Group entry for some patterns** (435, 512, 535, 542, plus
     470/Ecommerce - though 470 no longer matters here, see below, it bypasses
-    `Pattern_Store_Group` entirely now). We rank these last (after E) so they only get stock if
-    everything properly grouped is satisfied first. Still not confirmed for the remaining 4 -
-    probably means `Pattern_Store_Group` needs a data update regardless of what we do in code.
+    `Pattern_Store_Group` entirely now). **RESOLVED 2026-09-03** by Wesley: 435, 512, 535, 542
+    are closed or closing - they should not receive any allocation. Confirmed their
+    `Store Directory.WStoreType` is currently blank for all 4, so the existing Exc1 ("store
+    closed") rule already zeroes them out via `AllowSend` - no code change needed, and no data
+    fix needed either since WStoreType is already correctly blank. Their missing
+    `Pattern_Store_Group` rows are now moot (they'd be excluded before that lookup matters), so
+    this doesn't need to be filled in for these 4. This question is now fully closed.
 - ~~Store 470 (Ecommerce) priority~~ **RESOLVED 2026-08-31/2026-09-01** by Netto: option (a) -
   470's counts are a wholly separate weekly input, not derived from `Pattern_Store_Group`/DPS
   calc at all. Netto dropped an example file in `assets/Completed Normal Buyer Review-
@@ -44,12 +49,17 @@ Things we don't have answers for yet. Don't guess at these - ask Netto/Wesley.
     sample file: 57 requested, 44 got a nonzero final allocation (424 units), 0 blocked by
     exclusions, 13 zeroed out (11 not in this week's `ItemReplenishment`, 2 the DC-supply
     anomaly above). Full writeup in `business-rules.md`. **This question is now fully closed.**
-- **In-transit source.** Netto is getting us access to the real SAP ASN data (replicated to
-  SQL Server). Table/column names TBD - update `data-sources.md` and swap the placeholder in
-  `vw_AllocationDraft` once known.
-- **On-hand source confirmation.** We're using `EBT.dbo.INV_SBS_QTY_V_EXT.QTY`. Never explicitly
-  confirmed with Wesley as the right/authoritative source - it was just the best-covered
-  candidate found during exploration.
+- ~~In-transit source~~ **RESOLVED (interim) 2026-09-03** by Wesley: `INV_SBS_QTY_V_EXT` was
+  never actually wired up for in-transit (it was hardcoded 0) and Netto's SAP ASN source is
+  still TBD - in the meantime, Wesley will provide in-transit qty manually each week (same
+  pattern as `ItemReplenishment`/`EcommerceAllocationRequest`). He'll grant direct access to a
+  real table later; once that happens, swap the manual input for the real source and update this
+  file + `data-sources.md`. **New open sub-question:** file format and cadence for the manual
+  in-transit input - TBD until Wesley sends a sample file.
+- ~~On-hand source confirmation~~ **RESOLVED 2026-09-03** by Wesley: `EBT.dbo.INV_SBS_QTY_V_EXT.QTY`
+  is **not workable right now** - stop using it. On-hand qty will also be a manual weekly input
+  from Wesley, same as in-transit above. **New open sub-question:** file format and cadence for
+  the manual on-hand input - TBD until Wesley sends a sample file.
 - **The app itself.** No decision yet on what "the app" looks like for Wesley to use day to day
   (chat interface? something else?). Don't build UI/product surface without checking first.
 - **`ItemReplenishment` import cadence/ownership.** Confirmed: Wesley will keep manually

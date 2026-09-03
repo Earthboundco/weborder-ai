@@ -100,3 +100,32 @@ say so in a new entry.
 - Standing opens, unchanged: in-transit source (placeholder), on-hand source confirmation, the
   group tie-break assumption, and 4 of the 5 stores (435, 512, 535, 542) still missing from
   `Pattern_Store_Group` for some patterns.
+
+## 2026-09-03
+
+Session with Wesley to work through the standing open questions from `open-questions.md`.
+Resolutions:
+
+- **On-hand source**: `EBT.dbo.INV_SBS_QTY_V_EXT.QTY` is confirmed **not workable** right now.
+  On-hand qty will be a manual weekly input from Wesley instead. File format/cadence TBD -
+  waiting on a sample file from him (same pattern as `ItemReplenishment`).
+- **In-transit source**: also becomes a manual weekly input from Wesley for now (previously
+  hardcoded 0). He'll grant direct access to a real SAP-backed table later, at which point we
+  swap the manual input for the real source. File format/cadence also TBD.
+- **Store-group tie-break**: Wesley will provide an explicit store rank/priority list to replace
+  the StoreCode-ascending placeholder. Approach confirmed, list not yet delivered.
+- **Stores 435, 512, 535, 542**: confirmed closed/closing - should get no allocation. Wesley
+  confirmed `Store Directory.WStoreType` is currently blank for all 4, so the existing Exc1
+  ("store closed") exclusion rule already handles this correctly with no code or data change
+  needed. Their missing `Pattern_Store_Group` rows no longer matter (they're excluded upstream
+  of that lookup). This closes out both parts of the old "5 stores missing from
+  Pattern_Store_Group" open item for these 4 (470/Ecommerce was already resolved separately).
+
+**Not yet built**: the manual-input tables/import scripts for on-hand and in-transit (need
+sample files from Wesley first - same approach used for the store-470 Ecommerce input), and the
+`vw_AllocationDraft` change to source `OnHandQty`/`InTransitQty` from them. Also still waiting on
+Wesley's store-rank file for the tie-break. See `open-questions.md` for the live list of what's
+still pending from him.
+
+Next session should follow up with Wesley on: (1) sample file / format for manual on-hand input,
+(2) sample file / format for manual in-transit input, (3) the store rank list for tie-breaks.

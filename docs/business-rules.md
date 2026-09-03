@@ -113,6 +113,12 @@ that same table is the pre-cap desired amount (kept for visibility/debugging).
 
 ## Known placeholders (not final)
 
-- **In-transit qty is hardcoded to 0** in `vw_AllocationDraft`. Real source is SAP ASN vouchers,
-  replicated into SQL Server - Netto is locating the actual table/column names.
-- **On-hand qty source (`INV_SBS_QTY_V_EXT.QTY`) has not been confirmed as authoritative.**
+- **On-hand and in-transit qty are both moving to manual weekly inputs from Wesley** (resolved
+  2026-09-03 - see `open-questions.md`), the same pattern as `ItemReplenishment` and
+  `EcommerceAllocationRequest`: `EBT.dbo.INV_SBS_QTY_V_EXT.QTY` is confirmed **not workable** as
+  the on-hand source, and the in-transit placeholder (hardcoded 0 in `vw_AllocationDraft`) is
+  replaced by Wesley's manual numbers until he grants access to a real SAP ASN-backed table.
+  **Not yet built:** the import table(s)/script(s) for these two manual inputs, and the
+  `vw_AllocationDraft` change to source `OnHandQty`/`InTransitQty` from them instead of
+  `INV_SBS_QTY_V_EXT` and the hardcoded 0. Waiting on Wesley to send a sample file so we know the
+  exact columns/format (same approach as the store-470 Ecommerce input).
