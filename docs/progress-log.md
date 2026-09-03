@@ -70,3 +70,33 @@ say so in a new entry.
   useful, so lead with that one. Other standing opens at this point: in-transit source (still
   a placeholder), on-hand source confirmation, the group tie-break assumption, and the 5
   stores missing from `Pattern_Store_Group`.
+
+## 2026-09-01
+
+- Netto answered the store-470 open question: it's option (a) - a wholly separate weekly input,
+  not derived from `Pattern_Store_Group`. Dropped an example file, `assets/Completed Normal
+  Buyer Review- 08-31-26 Dawn.xlsx` (`Review` sheet), showing the real process: Dawn (a
+  different person) proposes item/qty asks, Wesley reviews and finalizes, lowering the qty
+  only when DC supply is short. Confirmed the two columns that matter: `Item` (C) and
+  `Ecommerce final allocation` (P). Full detail and a caveat (3 sample rows where P > DC
+  Supply, unexplained) logged in `open-questions.md`.
+- Not yet built: the import script/table for this input, or the `usp_RunAllocation` change to
+  source 470 from it at rank 0. Next session/step: confirm approach with Netto, then build.
+- Netto confirmed: exclusion rules still apply to 470 (safety net, even though Wesley's own
+  list curation already filters most dead/blocked items before Dawn sees it); build now rather
+  than waiting on the P > DC Supply anomaly.
+- Built it: `sql/009_add_ecommerce_allocation_override.sql` (new table
+  `EcommerceAllocationRequest`, redefines `vw_AllocationBase`/`vw_AllocationDraft` so store 470
+  sources its base qty from this table instead of `Pattern_Store_Group`, skipping on-hand
+  netting/case rounding but still subject to `AllowSend`), `scripts/import-ecommerce-
+  allocation.js`. Applied to the live `EBTAI` schema, imported the real sample file (57 items),
+  re-ran `usp_RunAllocation`. Results: 44/57 items got a nonzero final allocation for 470 (424
+  units total), 0 blocked by exclusions. Of the 13 zeroed: 11 weren't in this week's
+  `ItemReplenishment` (expected - different snapshot dates between the two source files); 2
+  (97352, 97360) were the exact P > DC Supply anomaly flagged earlier, confirmed here as
+  correct waterfall-cap behavior, not a bug (this week's real `DC_Qty` for both is 4, requested
+  was 6). Store-470 open question is now fully closed - see `business-rules.md` and
+  `open-questions.md` for the full writeup.
+- Standing opens, unchanged: in-transit source (placeholder), on-hand source confirmation, the
+  group tie-break assumption, and 4 of the 5 stores (435, 512, 535, 542) still missing from
+  `Pattern_Store_Group` for some patterns.

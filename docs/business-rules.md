@@ -46,15 +46,51 @@ simply weren't in this week's set).
    470 is filled by a separate person who sends her own counts, which take priority over every
    other store regardless of store group. Within a group, ties are broken by StoreCode
    ascending (assumption, not confirmed).
-   **Caveat: store 470 has zero rows in `Pattern_Store_Group` for every pattern, so its
-   `BaseAllocationQty` is always 0 under the current calculation - the rank-0 priority is
-   implemented and confirmed correct, but has nothing to act on yet. See `open-questions.md`.** Walk stores in that order keeping a running
+   Walk stores in that order keeping a running
    total of case-qty-rounded allocation; a store gets its full allocation only if the running
    total (including that store) is still <= `DC_Qty`. The moment a store can't be fully
    covered, that store AND every lower-priority store after it gets 0 - no partial fill, no
    skipping ahead. Validated: in the 788-item test set, 390 items needed capping, and after
    capping 0 items exceed their `DC_Qty` (average DC-supply utilization among capped items:
    ~78% - the remainder is always less than one more store's full case-rounded need).
+
+## Store 470 (Ecommerce) - separate weekly input, not the DCS/store-group calc
+
+**Resolved 2026-09-01** (was open since 2026-08-27): store 470 does not go through steps 1-3
+above at all. Wesley sends his SAP-curated item list to Dawn, she proposes a qty per item,
+and Wesley finalizes it - lowering it only when DC supply is short (e.g. she asks 25, DC has
+20, he enters 20). That final number is the only input for 470.
+
+- **Source**: weekly buyer-review workbook (e.g. `assets/Completed Normal Buyer Review-
+  08-31-26 Dawn.xlsx`), `Review` sheet, header row 3. Only two columns matter: `Item` (item
+  code) and `Ecommerce final allocation` (qty to ship). Other Ecom-looking columns on that
+  sheet (`Ecommerce Min`/`Max`/`suggested`, `Blocked for Ecom?`) are present but **not** used -
+  `Ecommerce suggested` was 0 on every sampled row, including ones with a nonzero final
+  allocation, so it isn't a usable substitute for Wesley's actual number.
+- **Import**: `scripts/import-ecommerce-allocation.js <file>` loads nonzero rows into
+  `EcommerceAllocationRequest` (ItemCode, RequestedQty). Run it alongside
+  `import-item-replenishment.js` each week, before `usp_RunAllocation`.
+- **Pipeline change** (`sql/009_add_ecommerce_allocation_override.sql`, redefining
+  `vw_AllocationBase`/`vw_AllocationDraft`): for `StoreCode = '470'`,
+  `BaseAllocationQty` = `EcommerceAllocationRequest.RequestedQty` (0 if the item isn't in the
+  request file) instead of the `Pattern_Store_Group`/allocation-table lookup. `AllocationQty`
+  skips on-hand netting and case-qty rounding for 470 - Wesley's number is already final and
+  case-aligned (confirmed: all 57 nonzero rows in the sample file were exact multiples of
+  `CASE_QTY`). The 12 exclusion rules (`AllowSend`) **still apply** to 470 - per Netto, Wesley's
+  list curation mostly filters dead/blocked items before Dawn sees them, but the rule check
+  stays as a safety net. 470 keeps its rank-0 priority in the waterfall (step 7), so its
+  requested qty is still subject to the same all-or-nothing DC-qty cap as every other store.
+- **Validated** against the real files (2026-09-01): 57 items requested for 470; 44 got a
+  nonzero final allocation (424 units total); 0 blocked by exclusions. Of the 13 that got zero:
+  11 simply weren't in that week's `ItemReplenishment` set (different snapshot dates between
+  the two source files - expected); 2 (items 97352, 97360) were the exact "requested qty >
+  sample-file DC Supply" anomaly flagged in `open-questions.md` when the sample was first
+  inspected - confirmed here as **not a bug**: this week's real `ItemReplenishment.DC_Qty` for
+  both is 4, requested qty was 6, so the existing waterfall cap (rank 0, no partial fill)
+  correctly zeroes 470 out for those two rather than over-shipping. This suggests the
+  "DC Supply" column in the buyer-review workbook can be a stale snapshot relative to the
+  current week's real DC quantity - worth confirming with Wesley if it becomes a recurring
+  pattern, but not blocking.
 
 ## Implementation note: views vs. tables
 

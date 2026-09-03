@@ -20,6 +20,7 @@ All DDL lives in `sql/`, applied in numeric order via `node scripts/run-sql.js s
 | `Item_Code_allocation_table` | table | (Item Code, Store Group) -> base allocation qty, item-specific override (4,018 rows) |
 | `DPS_Code_allocation_table` | table | (DPS Code, Store Group) -> base allocation qty, the general case (14,623 rows) |
 | `ItemReplenishment` | table | **Weekly input.** (ItemCode, DC_Qty) - the subset of items Wesley curates from SAP this week, and how much the DC has available. Populated by `scripts/import-item-replenishment.js`. |
+| `EcommerceAllocationRequest` | table | **Weekly input, store 470 only.** (ItemCode, RequestedQty) - Wesley's finalized per-item qty for store 470 (Ecommerce), after Dawn's ask and Wesley's DC-availability adjustment. Populated by `scripts/import-ecommerce-allocation.js` from the "Review" sheet (columns `Item`/`Ecommerce final allocation`) of Wesley's buyer-review workbook, e.g. `assets/Completed Normal Buyer Review- 08-31-26 Dawn.xlsx`. See `business-rules.md` for how this feeds store 470's allocation. |
 | `ItemInformation` | view | Item attributes needed downstream, straight from `EBT.dbo.Inventory_V_AUX`: DCS_CODE, ITEM_NO, DESCRIPTION1, LNCHCODE, IStatus, PRICE1/2, QTY_PER_CASE, MDQ, EBT_STR, EBTMKD, PROP65FAIL, ONLINE_STR, SIZ. This view **pre-existed** our work (built by someone else before we started). |
 | `ItemInformationComplete` | view | Builds on `ItemInformation`, adds the computed **DPS Code** (`DCS_CODE + '/' + PriceBucket + '/' + SizeBucket`) using hardcoded price-bucket and clothing-size-normalization logic. Also pre-existed. |
 | `ExclusionRules` | table | Metadata for the 12 exclusion rules - name, description, `IsActive` toggle. |
@@ -29,7 +30,7 @@ All DDL lives in `sql/`, applied in numeric order via `node scripts/run-sql.js s
 | `vw_AllocationDraft` | view | Full draft: base qty, `AllowSend`, on-hand qty, in-transit qty (placeholder), and pre-cap `AllocationQty` after exclusions + case-qty rounding. Does not cap to DC_Qty - that's the next stage. |
 | `AllocationDraft` | table | Materialized snapshot of `vw_AllocationDraft`, written by `usp_RunAllocation`. Exists purely for performance (see `business-rules.md` implementation note). |
 | `AllocationResults` | table | **Final output.** Same columns as `AllocationDraft` plus `GroupRank`, `RunningTotal`, and `FinalAllocationQty` (the real "what to ship" number, after the DC-qty waterfall cap). Written by `usp_RunAllocation`. |
-| `usp_RunAllocation` | procedure | Runs the full pipeline: materializes `vw_AllocationDraft` into `AllocationDraft`, then computes the store-group-priority waterfall cap into `AllocationResults`. Call after importing a new weekly item list or after any reference-data/rule change. ~1 minute over 788 items x 144 stores. |
+| `usp_RunAllocation` | procedure | Runs the full pipeline: materializes `vw_AllocationDraft` into `AllocationDraft`, then computes the store-group-priority waterfall cap into `AllocationResults`. Call after importing a new weekly item list (or the Ecommerce request) or after any reference-data/rule change. ~1 minute over 788 items x 144 stores. |
 
 ## Key tables in `EBT` we depend on
 
