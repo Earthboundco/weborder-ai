@@ -254,3 +254,20 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
     fixed position. Verified: re-ran the import against the new file, same 788 items loaded.
   - `assets/EcommerceAllocationRequest.xlsx` renamed to `assets/Ecommerce_Allocation_Request.xlsx`
     (pure rename, no content change).
+
+## 2026-09-05/06 (cont. 7)
+
+- **Added a 14th exclusion rule, "Temporary Blocking"**, per Wesley: used while an item is being
+  tested at selected locations only - the item stays in DC stock, but every store *not* part of
+  the test gets a `Status='Block'` row in a new `Temporary_Blocking` table (Store, Item, Status
+  - business Store Code + plain item code, per Wesley). Once a test concludes, the blocking rows
+  for that item are removed and it opens up to all stores normally. Added as `Exc14` following
+  the existing 13-rule pattern exactly (metadata row, `vw_ExclusionEvaluation` column, rolled
+  into `vw_ItemStoreAllowSend`). See `sql/014_add_temporary_blocking_exclusion_rule.sql` and
+  `scripts/import-temporary-blocking.js` (truncate/reload, refreshes weekly or every other week).
+- Checked the real file (493 rows, all `Status='Block'`, 7 items across 119 stores, no
+  duplicates): all 493 combos are now correctly blocked, but **0 of those had previously passed**
+  all 13 other rules - every one was already blocked by Exc13 (RP999) or Exc12. So this rule
+  currently has zero net effect on shipped results for the current item set, but is correctly
+  wired in for when it does matter (e.g. an item mid-test where RP hasn't also set 999). Re-ran
+  `usp_RunAllocation`.
