@@ -167,3 +167,23 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
 - **Standing opens now down to just:** the store-group tie-break rank list (still waiting on
   Wesley's list; StoreCode-ascending remains the placeholder), and "the app itself" (no UI
   decided yet).
+
+## 2026-09-05 (cont.)
+
+- **`Item_Code_allocation_table` and `DPS_Code_allocation_table` become weekly inputs**, per
+  Wesley - previously a one-time load from his original mock file at project start, now
+  refreshed weekly like `ItemReplenishment`/`StoreItemInventory`/`EcommerceAllocationRequest`.
+  Wesley will send two separate files each week (`assets/Item_Code_allocation_table.xlsx`,
+  `assets/DPS_Code_allocation_table.xlsx`), "wide" layout (one row per Item Code or DPS Code,
+  one column per store group A1/A2/A3/B/C/D/E) - same shape as the sheets in the original
+  `Weborder summary.xlsx` mockup, just header row 1 instead of row 3 and no title row.
+- Built `scripts/import-allocation-table.js <item|dps> <file>` - one shared script that
+  unpivots either file into the long `(key, StoreGroup, AllocationQty)` shape both DB tables
+  actually use, then truncates/reloads. Confirmed both files clean (no duplicate keys, no
+  blank cells) before running.
+- Ran it against the real files: `Item_Code_allocation_table` -> 574 items x 7 groups = 4,018
+  rows (same item count as before - no real change); `DPS_Code_allocation_table` -> 2,924 DPS
+  codes x 7 groups = 20,468 rows (up from 2,089 DPS codes/14,623 rows before - more coverage,
+  not less). Re-ran `usp_RunAllocation` afterward so `AllocationResults` reflects the new data.
+  No schema/view changes needed - `vw_AllocationBase` already read from these two tables by
+  name, only their contents changed.
