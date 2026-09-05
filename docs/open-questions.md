@@ -49,17 +49,30 @@ Things we don't have answers for yet. Don't guess at these - ask Netto/Wesley.
     sample file: 57 requested, 44 got a nonzero final allocation (424 units), 0 blocked by
     exclusions, 13 zeroed out (11 not in this week's `ItemReplenishment`, 2 the DC-supply
     anomaly above). Full writeup in `business-rules.md`. **This question is now fully closed.**
-- ~~In-transit source~~ **RESOLVED (interim) 2026-09-03** by Wesley: `INV_SBS_QTY_V_EXT` was
-  never actually wired up for in-transit (it was hardcoded 0) and Netto's SAP ASN source is
-  still TBD - in the meantime, Wesley will provide in-transit qty manually each week (same
-  pattern as `ItemReplenishment`/`EcommerceAllocationRequest`). He'll grant direct access to a
-  real table later; once that happens, swap the manual input for the real source and update this
-  file + `data-sources.md`. **New open sub-question:** file format and cadence for the manual
-  in-transit input - TBD until Wesley sends a sample file.
-- ~~On-hand source confirmation~~ **RESOLVED 2026-09-03** by Wesley: `EBT.dbo.INV_SBS_QTY_V_EXT.QTY`
-  is **not workable right now** - stop using it. On-hand qty will also be a manual weekly input
-  from Wesley, same as in-transit above. **New open sub-question:** file format and cadence for
-  the manual on-hand input - TBD until Wesley sends a sample file.
+- ~~In-transit source~~ **RESOLVED (interim) 2026-09-03**, **format delivered and built
+  2026-09-05** by Wesley: `INV_SBS_QTY_V_EXT` was never actually wired up for in-transit (it was
+  hardcoded 0) and Netto's SAP ASN source is still TBD - Wesley now provides in-transit qty as
+  part of a combined weekly manual export, `assets/Stores_Qtys_and_MinMax.xlsx` (`Store_Code` /
+  `Item_number` / `On-Hand_qty` / `In-Transit_qty` / `Min_qty` / `Max_qty`, keyed on the business
+  Store Code). Imported via `scripts/import-store-inventory.js` into the new
+  `StoreItemInventory` table; `vw_AllocationDraft` now sources `InTransitQty` from it instead of
+  the hardcoded 0 (see `sql/011_add_store_item_inventory_table.sql`). He'll still grant direct
+  access to a real SAP ASN-backed table later - swap the manual input for that once it exists.
+  **This question is now fully closed** (format/cadence sub-question resolved - cadence is
+  weekly, same as `ItemReplenishment`).
+- ~~On-hand source confirmation~~ **RESOLVED 2026-09-03**, **format delivered and built
+  2026-09-05** by Wesley: `EBT.dbo.INV_SBS_QTY_V_EXT.QTY` is **not workable right now** (also
+  observed to return volatile/negative values live between two queries minutes apart during
+  testing - see `progress-log.md`). On-hand qty now comes from the same
+  `assets/Stores_Qtys_and_MinMax.xlsx` weekly export as in-transit above, into the same
+  `StoreItemInventory` table. **This question is now fully closed.**
+- **On-hand/in-transit floor rule (found and fixed 2026-09-05):** while simulating item 96443's
+  replenishment, found that negative on-hand values (a real, recurring data quirk - 436 of
+  114,260 rows in the 2026-09-05 export are negative) were making `NetNeed` come out *larger*
+  than intended instead of being treated as "no usable stock." Per Wesley: floor
+  `OnHandQty + InTransitQty` at 0 before netting against `BaseAllocationQty`. Fixed in
+  `vw_AllocationDraft` (`sql/010_floor_onhand_plus_intransit.sql`, carried forward into `011`).
+  Not really an open question anymore, logged here for traceability.
 - **The app itself.** No decision yet on what "the app" looks like for Wesley to use day to day
   (chat interface? something else?). Don't build UI/product surface without checking first.
 - **`ItemReplenishment` import cadence/ownership.** Confirmed: Wesley will keep manually

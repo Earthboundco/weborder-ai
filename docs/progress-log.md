@@ -129,3 +129,41 @@ still pending from him.
 
 Next session should follow up with Wesley on: (1) sample file / format for manual on-hand input,
 (2) sample file / format for manual in-transit input, (3) the store rank list for tie-breaks.
+
+## 2026-09-05
+
+Started interactive simulation/testing of the pipeline with Wesley, one item code at a time,
+rather than editing the real 788-item `ItemReplenishment` input down to one row (unnecessary -
+just query the existing loaded set/`AllocationResults` filtered to one item).
+
+- **Traced item 96443** ("Chime - Wood Top Mini Asst", Pattern 07, DC_Qty=60) end-to-end: DCS
+  Pattern -> store groups -> base qty -> 31/144 stores excluded (30 by Exc4 Markdown, 1 by Exc3
+  Online-store for store 470) -> on-hand netting/case rounding -> DC-qty waterfall cap. Final
+  result at the time: 60/60 units shipped to 5 stores (400, 306, 469, 301, 418), matching the
+  "no partial fill" rule exactly (running total hit exactly 60 after store 418).
+- **Found and fixed a real bug** surfaced by this trace: store 516 had on-hand qty of -1 (later
+  observed as -2 minutes later from the same live view - see below), and `vw_AllocationDraft`
+  was netting `BaseAllocationQty - OnHandQty - InTransitQty` without flooring on-hand at 0 first,
+  so a negative on-hand value made `NetNeed` *larger* than intended instead of being treated as
+  "no usable stock." Fixed per Wesley's rule (floor `OnHandQty + InTransitQty` at 0 before
+  netting) in `sql/010_floor_onhand_plus_intransit.sql`. Confirmed via `AllocationDraft` that
+  316 of the 788-item set's item/store rows had negative on-hand at the time - a real, broad
+  data-quality issue, not a one-off.
+- **Closed both remaining "Known placeholder" open questions** (on-hand source, in-transit
+  source): Wesley provided `assets/Stores_Qtys_and_MinMax.xlsx`, a weekly export
+  (`Store_Code`/`Item_number`/`On-Hand_qty`/`In-Transit_qty`/`Min_qty`/`Max_qty`, ~114k rows,
+  788 items x 145 store codes including `HDQ`/closed stores, keyed on the business Store Code
+  per Wesley's confirmation). Built `StoreItemInventory` table + `scripts/import-store-
+  inventory.js` (bulk insert - row-by-row like the other two import scripts would be far too
+  slow at this scale) + `sql/011_add_store_item_inventory_table.sql` (redefines
+  `vw_AllocationDraft` again to source `OnHandQty`/`InTransitQty` from this table instead of
+  `INV_SBS_QTY_V_EXT`/hardcoded 0, keeping the floor-at-0 fix). Imported and re-ran
+  `usp_RunAllocation` against the real file - `AllocationResults` now reflects the new source
+  (confirmed item 96443's on-hand values changed accordingly, e.g. store 469 now nets to 0
+  need instead of shipping 12, since its real on-hand of 18 already covers the base qty of 16).
+- Noted while testing: `INV_SBS_QTY_V_EXT` (now retired) returned different on-hand values for
+  the same store/item just minutes apart with no import in between - live volatility, further
+  confirming Wesley's call that it wasn't a workable source.
+- **Standing opens now down to just:** the store-group tie-break rank list (still waiting on
+  Wesley's list; StoreCode-ascending remains the placeholder), and "the app itself" (no UI
+  decided yet).

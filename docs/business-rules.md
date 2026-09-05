@@ -111,14 +111,24 @@ exclusion rules / reference tables change. Takes about a minute over 788 items x
 `AllocationResults.FinalAllocationQty` is the actual "what to ship" number; `AllocationQty` on
 that same table is the pre-cap desired amount (kept for visibility/debugging).
 
-## Known placeholders (not final)
+## On-hand and in-transit qty (resolved 2026-09-05 - previously a placeholder)
 
-- **On-hand and in-transit qty are both moving to manual weekly inputs from Wesley** (resolved
-  2026-09-03 - see `open-questions.md`), the same pattern as `ItemReplenishment` and
-  `EcommerceAllocationRequest`: `EBT.dbo.INV_SBS_QTY_V_EXT.QTY` is confirmed **not workable** as
-  the on-hand source, and the in-transit placeholder (hardcoded 0 in `vw_AllocationDraft`) is
-  replaced by Wesley's manual numbers until he grants access to a real SAP ASN-backed table.
-  **Not yet built:** the import table(s)/script(s) for these two manual inputs, and the
-  `vw_AllocationDraft` change to source `OnHandQty`/`InTransitQty` from them instead of
-  `INV_SBS_QTY_V_EXT` and the hardcoded 0. Waiting on Wesley to send a sample file so we know the
-  exact columns/format (same approach as the store-470 Ecommerce input).
+Both are now a combined manual weekly input from Wesley: `assets/Stores_Qtys_and_MinMax.xlsx`
+(`Store_Code`/`Item_number`/`On-Hand_qty`/`In-Transit_qty`/`Min_qty`/`Max_qty`, keyed on the
+business Store Code - same numbering as `Pattern_Store_Group`/`ItemReplenishment`). Imported via
+`scripts/import-store-inventory.js` (bulk insert - the file is ~114k rows, too many for the
+row-by-row pattern the other two import scripts use) into `StoreItemInventory`. This retires
+`EBT.dbo.INV_SBS_QTY_V_EXT` as the on-hand source (confirmed not workable by Wesley 2026-09-03)
+and the hardcoded `InTransitQty = 0`. `Min_qty`/`Max_qty` are imported but not used by the
+allocation calc today - kept for reference/future use. Wesley will still grant access to a real
+SAP ASN-backed in-transit table later; swap this manual input for that once it exists.
+
+**Netting rule, including a fix found while testing:** `NetNeed = BaseAllocationQty -
+(OnHandQty + InTransitQty)`, but `OnHandQty + InTransitQty` is **floored at 0 before netting** -
+found this matters because on-hand values are sometimes negative in practice (a real data quirk,
+436 of 114,260 rows in the 2026-09-05 export), which without the floor made `NetNeed` come out
+*larger* than intended (e.g. Base 8 - OnHand -1 = 9) instead of treating negative on-hand as "no
+usable stock." `NetNeed` itself is still separately floored at 0 as before. Implemented in
+`sql/010_floor_onhand_plus_intransit.sql`, carried forward in `sql/011_add_store_item_inventory_table.sql`.
+Store 470 (Ecommerce) is unaffected either way - it already skips on-hand/in-transit netting
+entirely (see below).
