@@ -6,10 +6,14 @@ Things we don't have answers for yet. Don't guess at these - ask Netto/Wesley.
   priority order (A1, A2, A3, B, C, D, E); the moment a store can't be fully covered, allocation
   stops entirely (no partial-fill, no skipping ahead). Implemented in `usp_RunAllocation`. Two
   smaller things from implementing this are still open:
-  - **Tie-break within the same group.** ~~Netto didn't specify ordering~~ **Approach resolved
-    2026-09-03** by Wesley: he'll provide an explicit store rank/priority list to use instead of
-    the StoreCode-ascending guess. **Not yet delivered** - still waiting on the actual list from
-    Wesley. Keep StoreCode ascending as the placeholder until it arrives, then swap in his rank.
+  - ~~Tie-break within the same group.~~ **RESOLVED 2026-09-05** by Wesley: rather than just a
+    tie-break within Store Group, he provided a full explicit per-(Pattern, Store) Rank
+    (1-139) that **replaces Store Group entirely** for waterfall ordering purposes - a
+    low-priority A1 store can rank below a high-priority B store. Store Group itself is
+    unchanged and still used for the base allocation qty lookup. Added as a new `Rank` column
+    on `Pattern_Store_Group`, loaded via `scripts/import-pattern-store-group.js`, refreshed
+    every 6-8 weeks. See `business-rules.md` for the full mechanics. **This question is now
+    fully closed.**
   - **5 stores have no Pattern_Store_Group entry for some patterns** (435, 512, 535, 542, plus
     470/Ecommerce - though 470 no longer matters here, see below, it bypasses
     `Pattern_Store_Group` entirely now). **RESOLVED 2026-09-03** by Wesley: 435, 512, 535, 542

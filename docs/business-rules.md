@@ -40,20 +40,29 @@ simply weren't in this week's set).
 6. **Case-qty rounding: always round UP to the next full case.** We never break a case to ship
    a partial amount - e.g. need 5, case qty 2 -> send 6, not 4 or 5. Implemented as
    `CEILING(NetNeed / QTY_PER_CASE) * QTY_PER_CASE`.
-7. **DC-qty cap, waterfall by store group priority** (per Netto, 2026-08-27): if summed
-   allocation across stores for an item exceeds `DC_Qty`, fill stores in priority order
-   **470 (Ecommerce, rank 0) first, then A1, A2, A3, B, C, D, E** (rank 1-7; any store with no
-   `Pattern_Store_Group` entry for that pattern ranks last, 99 - see `open-questions.md`).
-   470 is filled by a separate person who sends her own counts, which take priority over every
-   other store regardless of store group. Within a group, ties are broken by StoreCode
-   ascending (assumption, not confirmed).
+7. **DC-qty cap, waterfall by explicit store rank** (per Netto for the overall mechanism,
+   2026-08-27; ordering itself updated 2026-09-05 per Wesley): if summed allocation across
+   stores for an item exceeds `DC_Qty`, fill stores in priority order **470 (Ecommerce) always
+   first**, then every other store in ascending order of `Pattern_Store_Group.Rank` for that
+   item's DCS Pattern. Originally this was Store Group order (A1, A2, A3, B, C, D, E) with an
+   unconfirmed StoreCode-ascending tie-break within a group; Wesley replaced that entirely with
+   an explicit per-(Pattern, Store) `Rank` (1-139, unique per pattern - see `data-sources.md`),
+   so a low-priority A1 store can now rank below a high-priority B store. Store Group itself is
+   untouched and still used for step 3's base allocation qty lookup - only the *cut order* when
+   supply is short changed. Any store missing from `Pattern_Store_Group` for that pattern falls
+   back to rank 999 (shouldn't occur - the current file covers all 139 non-470/non-closed
+   stores for every pattern). 470 is filled by a separate person who sends her own counts,
+   which still take priority over every other store regardless of rank.
    Walk stores in that order keeping a running
    total of case-qty-rounded allocation; a store gets its full allocation only if the running
    total (including that store) is still <= `DC_Qty`. The moment a store can't be fully
    covered, that store AND every lower-priority store after it gets 0 - no partial fill, no
    skipping ahead. Validated: in the 788-item test set, 390 items needed capping, and after
    capping 0 items exceed their `DC_Qty` (average DC-supply utilization among capped items:
-   ~78% - the remainder is always less than one more store's full case-rounded need).
+   ~78% - the remainder is always less than one more store's full case-rounded need). Re-checked
+   after the 2026-09-05 rank change on item 96443: same total units shipped (60, since DC_Qty
+   and case size happened to work out the same either way) but a *different* set of 5 stores
+   served - confirms the reordering is real, not a no-op.
 
 ## Store 470 (Ecommerce) - separate weekly input, not the DCS/store-group calc
 

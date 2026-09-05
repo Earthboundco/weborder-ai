@@ -201,3 +201,26 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   788-item set have Min=Max=999; 3,268 of those had previously passed all 12 other rules (i.e.
   would otherwise have shipped) - confirmed all 11,999 are now correctly blocked after the
   change. Re-ran `usp_RunAllocation` so `AllocationResults` reflects it.
+
+## 2026-09-05 (cont. 4)
+
+- **Resolved the last standing open question: the DC-qty waterfall tie-break order.** Wesley
+  provided `assets/Pattern_Store_Group.xlsx` with a new `Rank` column - not just a tie-break
+  within Store Group as originally scoped, but an explicit full priority order (1-139, unique
+  per pattern) that **replaces Store Group entirely** for waterfall ordering (Store Group is
+  unchanged for the base allocation qty lookup). Confirmed the file itself is clean: all 11
+  patterns have exactly 139 stores, ranks 1-139 with zero duplicates/gaps per pattern - matches
+  144 active stores minus 470 (separate input) minus the 4 closed stores.
+- Built `scripts/import-pattern-store-group.js` (truncate/reload, refreshes every 6-8 weeks per
+  Wesley - not weekly like the other five inputs, but same pattern) and
+  `sql/013_add_rank_to_pattern_store_group.sql`: adds the `Rank` column + a unique index on
+  (`DCS pattern`, `Store code`) since it's now joined per-row in the waterfall calc, and
+  rewrites `usp_RunAllocation`'s `GroupRank` logic to pull `Pattern_Store_Group.Rank` directly
+  instead of the old Store-Group CASE expression (store 470 keeps its hardcoded always-first
+  position). Loaded the real file (1,529 rows) and re-ran `usp_RunAllocation`.
+- Verified on item 96443: same total shipped (60 units, since `DC_Qty`/case size happened to
+  work out the same either way) but a genuinely *different* set of 5 stores served than under
+  the old Store-Group ordering (e.g. store 442, A3, now ships ahead of some A2 stores because
+  its explicit rank is lower) - confirms the reordering actually took effect, not a no-op.
+- **All standing opens from `open-questions.md` are now closed except "the app itself"** (no UI
+  decided yet).
