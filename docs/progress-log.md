@@ -187,3 +187,17 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   not less). Re-ran `usp_RunAllocation` afterward so `AllocationResults` reflects the new data.
   No schema/view changes needed - `vw_AllocationBase` already read from these two tables by
   name, only their contents changed.
+
+## 2026-09-05 (cont. 3)
+
+- **Added a 13th exclusion rule, "Blocking RP 999"**, per Wesley: Retail Pro (internal POS)
+  blocks an item from a store by setting that store's Min AND Max level to 999 for that item -
+  those values are exactly `StoreItemInventory.MinQty`/`MaxQty` (imported from
+  `Stores_Qtys_and_MinMax.xlsx`, previously unused). Added as `Exc13` following the existing
+  12-rule pattern exactly: metadata row in `ExclusionRules`, a column in
+  `vw_ExclusionEvaluation` (new `LEFT JOIN StoreItemInventory`), rolled into
+  `vw_ItemStoreAllowSend`'s `AllowSend` check. See `sql/012_add_blocking_rp999_exclusion_rule.sql`.
+- Checked impact before and after applying: 11,999 of 113,472 item/store rows in the current
+  788-item set have Min=Max=999; 3,268 of those had previously passed all 12 other rules (i.e.
+  would otherwise have shipped) - confirmed all 11,999 are now correctly blocked after the
+  change. Re-ran `usp_RunAllocation` so `AllocationResults` reflects it.

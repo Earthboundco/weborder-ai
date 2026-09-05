@@ -1,6 +1,6 @@
 # Business rules
 
-## Exclusion rules (12 rules, `ExclusionRules` + `vw_ExclusionEvaluation`)
+## Exclusion rules (13 rules, `ExclusionRules` + `vw_ExclusionEvaluation`)
 
 Migrated from an Access database (no longer the source of truth - SQL Server is now). Each
 rule can be toggled off via `ExclusionRules.IsActive` without touching the view logic.
@@ -19,8 +19,9 @@ rule can be toggled off via `ExclusionRules.IsActive` without touching the view 
 | Exc10 | Fashion Focus Store status | Items with `IStatus = FashionFocusStore` only ship to Fashion Focus stores or stores 376/470. |
 | Exc11 | Fashion Focus block entire DCS | Block Fashion Focus stores + store 479 entirely from DCS codes: AS IB, AS OB, AS OI, AS SS, HD DO CD, HD TP, IM BK. |
 | Exc12 | Fashion Focus block DCS with exceptions | Same stores, but per-DCS item/vendor/description exceptions (AS IN MI except item 16472, AS IN SC except vendor V01072, HD DO DA except item 34299, HD RM except a 16-item list, HD TX except item 28063, HD WD AC except "WALL BANNER" items). |
+| Exc13 | Blocking RP 999 | **Added 2026-09-05.** Block item/store combos where Retail Pro (the internal POS system) has set both Min level and Max level to 999 for that item at that store - this is how RP marks an item as blocked from a store. Sourced from `StoreItemInventory.MinQty`/`MaxQty` (see `sql/012_add_blocking_rp999_exclusion_rule.sql`). If there's no `StoreItemInventory` row at all for that item/store, this rule passes (no data ≠ blocked). Validated 2026-09-05 against the current 788-item set: 11,999 of 113,472 item/store rows have Min=Max=999, all correctly blocked; 3,268 of those had previously passed all 12 other rules (i.e. this rule newly blocks 3,268 combos that would otherwise have shipped). |
 
-`AllowSend` (in `vw_ItemStoreAllowSend`) = Y only if all 12 rules return Y.
+`AllowSend` (in `vw_ItemStoreAllowSend`) = Y only if all 13 rules return Y.
 
 **Validated 2026-08-27** against the real 788-item weekly set x 144 active stores (113,472
 combos): 9,149 blocked overall. Per-rule block counts: Exc10 blocked the most (7,506), then
