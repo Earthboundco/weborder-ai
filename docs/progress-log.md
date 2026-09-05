@@ -224,3 +224,22 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   its explicit rank is lower) - confirms the reordering actually took effect, not a no-op.
 - **All standing opens from `open-questions.md` are now closed except "the app itself"** (no UI
   decided yet).
+
+## 2026-09-05 (cont. 5)
+
+- **Cleaned up two asset file names/formats**, per Wesley:
+  - `assets/Inventory in Warehouse.xlsx` renamed to `assets/ItemReplenishment.xlsx` (matches
+    the table it feeds, same convention as the other recently-added files) - same sheet/columns,
+    no format or script change needed (`scripts/import-item-replenishment.js` takes the file
+    path as an argument).
+  - `assets/Completed Normal Buyer Review- 08-31-26 Dawn.xlsx` (the original 82-column,
+    972-row buyer-review workbook) replaced with `assets/EcommerceAllocationRequest.xlsx` - a
+    simplified 3-column format (`Store`, `Item`, `Qty`, header row 1), keeping only the 57 rows
+    that actually had a nonzero final allocation (the rest were never imported anyway). Updated
+    `scripts/import-ecommerce-allocation.js` to parse the new shape, plus a sanity check that
+    every row's `Store` is `470` (this table has no store column of its own). Re-ran the import
+    against the new file - same 57 rows loaded as before, confirming the new parser reproduces
+    the original data exactly.
+  - Old buyer-review workbook removed from the repo (still recoverable from git history if ever
+    needed); the reasoning behind which two columns of the original mattered is preserved in
+    `open-questions.md` for context.

@@ -71,12 +71,15 @@ above at all. Wesley sends his SAP-curated item list to Dawn, she proposes a qty
 and Wesley finalizes it - lowering it only when DC supply is short (e.g. she asks 25, DC has
 20, he enters 20). That final number is the only input for 470.
 
-- **Source**: weekly buyer-review workbook (e.g. `assets/Completed Normal Buyer Review-
-  08-31-26 Dawn.xlsx`), `Review` sheet, header row 3. Only two columns matter: `Item` (item
-  code) and `Ecommerce final allocation` (qty to ship). Other Ecom-looking columns on that
-  sheet (`Ecommerce Min`/`Max`/`suggested`, `Blocked for Ecom?`) are present but **not** used -
-  `Ecommerce suggested` was 0 on every sampled row, including ones with a nonzero final
-  allocation, so it isn't a usable substitute for Wesley's actual number.
+- **Source**: `assets/EcommerceAllocationRequest.xlsx` - simplified 3-column format (`Store`,
+  `Item`, `Qty`, header row 1) as of 2026-09-05, cleaned up from the original weekly
+  buyer-review workbook (e.g. the original was `Completed Normal Buyer Review-
+  08-31-26 Dawn.xlsx`, `Review` sheet, header row 3 - see `open-questions.md` for how the
+  original two-column mapping - `Item`/`Ecommerce final allocation` - was worked out, including
+  why the other Ecom-looking columns on that sheet weren't usable). `Store` is expected to
+  always be `470` - the import script errors out if it finds any other value, rather than
+  silently accepting it, since this table has no store column of its own (always store 470
+  downstream).
 - **Import**: `scripts/import-ecommerce-allocation.js <file>` loads nonzero rows into
   `EcommerceAllocationRequest` (ItemCode, RequestedQty). Run it alongside
   `import-item-replenishment.js` each week, before `usp_RunAllocation`.

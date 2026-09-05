@@ -53,6 +53,11 @@ Things we don't have answers for yet. Don't guess at these - ask Netto/Wesley.
     sample file: 57 requested, 44 got a nonzero final allocation (424 units), 0 blocked by
     exclusions, 13 zeroed out (11 not in this week's `ItemReplenishment`, 2 the DC-supply
     anomaly above). Full writeup in `business-rules.md`. **This question is now fully closed.**
+  - **Update 2026-09-05:** the source file itself was cleaned up/renamed - the full buyer-review
+    workbook is no longer needed as an asset; `assets/EcommerceAllocationRequest.xlsx` (3
+    columns: `Store`/`Item`/`Qty`) is now the actual weekly input. The two-column mapping worked
+    out above (`Item`/`Ecommerce final allocation`) is still the reasoning behind which two
+    numbers matter - it's just delivered in a simpler shape now. See `business-rules.md`.
 - ~~In-transit source~~ **RESOLVED (interim) 2026-09-03**, **format delivered and built
   2026-09-05** by Wesley: `INV_SBS_QTY_V_EXT` was never actually wired up for in-transit (it was
   hardcoded 0) and Netto's SAP ASN source is still TBD - Wesley now provides in-transit qty as
