@@ -71,7 +71,7 @@ above at all. Wesley sends his SAP-curated item list to Dawn, she proposes a qty
 and Wesley finalizes it - lowering it only when DC supply is short (e.g. she asks 25, DC has
 20, he enters 20). That final number is the only input for 470.
 
-- **Source**: `assets/EcommerceAllocationRequest.xlsx` - simplified 3-column format (`Store`,
+- **Source**: `assets/Ecommerce_Allocation_Request.xlsx` - simplified 3-column format (`Store`,
   `Item`, `Qty`, header row 1) as of 2026-09-05, cleaned up from the original weekly
   buyer-review workbook (e.g. the original was `Completed Normal Buyer Review-
   08-31-26 Dawn.xlsx`, `Review` sheet, header row 3 - see `open-questions.md` for how the

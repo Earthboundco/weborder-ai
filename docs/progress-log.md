@@ -243,3 +243,14 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   - Old buyer-review workbook removed from the repo (still recoverable from git history if ever
     needed); the reasoning behind which two columns of the original mattered is preserved in
     `open-questions.md` for context.
+
+## 2026-09-05 (cont. 6)
+
+- **Further asset cleanup**, per Wesley:
+  - `assets/ItemReplenishment.xlsx` renamed to `assets/Items_for_Replenishment.xlsx`, and
+    stripped a leading title/formula row (`"Total weborder items: " & COUNTA(...)`) and a
+    blank column A - header (`Item #`/`DC Supply`) now sits at row 1, columns A/B. No script
+    change needed - `scripts/import-item-replenishment.js` finds the header by cell value, not
+    fixed position. Verified: re-ran the import against the new file, same 788 items loaded.
+  - `assets/EcommerceAllocationRequest.xlsx` renamed to `assets/Ecommerce_Allocation_Request.xlsx`
+    (pure rename, no content change).
