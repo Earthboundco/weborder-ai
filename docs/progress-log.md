@@ -271,3 +271,29 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   currently has zero net effect on shipped results for the current item set, but is correctly
   wired in for when it does matter (e.g. an item mid-test where RP hasn't also set 999). Re-ran
   `usp_RunAllocation`.
+
+## 2026-09-06 (cont.)
+
+- **Added "Initial Shortage Adjustment"** and renamed the existing waterfall cap to **"Final
+  Shortage Adjustment"**, per Wesley. When an item's shortage (demand - `DC_Qty`) is <=30 pcs,
+  behavior is unchanged (straight to the Final Shortage Adjustment). When shortage exceeds 30,
+  a new step now softens it first: walk groups E->D->C->B->A3->A2->A1 (470 never a target,
+  though its qty still counts as demand), cutting each group's `BaseAllocationQty` by 5%
+  (floored, compounding off the current value) and re-netting/case-rounding as normal after
+  each cut - the case-quantity rule is never broken, only the pre-netting base number shrinks.
+  Recomputes shortage after every single group step and stops the instant it's <=30 - doesn't
+  necessarily walk the full sequence. Loops back to E if a full pass isn't enough, with a
+  200-cycle safety cap.
+- Implemented as a cursor-based loop in `usp_RunAllocation` (`sql/015_add_initial_shortage_
+  adjustment.sql`) - this genuinely needs iteration (each step's outcome depends on the
+  cumulative effect of prior steps), which can't be expressed as a single set-based query.
+  Added ~30s to the full run (now ~1:30 total over 788 items).
+- Hand-verified against item 96800 (DC_Qty=22, demand 53, shortage 31) before building, then
+  confirmed the actual run matched exactly: group E was a genuine no-op (on-hand already
+  covered its tiny base qty), group D's cut dropped demand to 42 (shortage 20), stopping after
+  just 2 of the 7 possible steps. The Final Shortage Adjustment then correctly capped the
+  result to exactly 22. Also confirmed: 0 of 788 items still had shortage >30 after the step ran
+  (universal convergence, safety cap never triggered); an item that started <=30 (96144) had its
+  BaseAllocationQty completely unchanged, confirming untouched items are genuinely left alone.
+- Docs updated: business-rules.md (new dedicated section + renamed references throughout),
+  progress-log.md.

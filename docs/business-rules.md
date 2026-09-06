@@ -41,29 +41,71 @@ simply weren't in this week's set).
 6. **Case-qty rounding: always round UP to the next full case.** We never break a case to ship
    a partial amount - e.g. need 5, case qty 2 -> send 6, not 4 or 5. Implemented as
    `CEILING(NetNeed / QTY_PER_CASE) * QTY_PER_CASE`.
-7. **DC-qty cap, waterfall by explicit store rank** (per Netto for the overall mechanism,
-   2026-08-27; ordering itself updated 2026-09-05 per Wesley): if summed allocation across
-   stores for an item exceeds `DC_Qty`, fill stores in priority order **470 (Ecommerce) always
-   first**, then every other store in ascending order of `Pattern_Store_Group.Rank` for that
-   item's DCS Pattern. Originally this was Store Group order (A1, A2, A3, B, C, D, E) with an
-   unconfirmed StoreCode-ascending tie-break within a group; Wesley replaced that entirely with
-   an explicit per-(Pattern, Store) `Rank` (1-139, unique per pattern - see `data-sources.md`),
-   so a low-priority A1 store can now rank below a high-priority B store. Store Group itself is
-   untouched and still used for step 3's base allocation qty lookup - only the *cut order* when
-   supply is short changed. Any store missing from `Pattern_Store_Group` for that pattern falls
-   back to rank 999 (shouldn't occur - the current file covers all 139 non-470/non-closed
-   stores for every pattern). 470 is filled by a separate person who sends her own counts,
-   which still take priority over every other store regardless of rank.
-   Walk stores in that order keeping a running
-   total of case-qty-rounded allocation; a store gets its full allocation only if the running
-   total (including that store) is still <= `DC_Qty`. The moment a store can't be fully
-   covered, that store AND every lower-priority store after it gets 0 - no partial fill, no
-   skipping ahead. Validated: in the 788-item test set, 390 items needed capping, and after
-   capping 0 items exceed their `DC_Qty` (average DC-supply utilization among capped items:
-   ~78% - the remainder is always less than one more store's full case-rounded need). Re-checked
-   after the 2026-09-05 rank change on item 96443: same total units shipped (60, since DC_Qty
-   and case size happened to work out the same either way) but a *different* set of 5 stores
-   served - confirms the reordering is real, not a no-op.
+7. **If demand exceeds supply, adjust/cap.** "Demand" here means `SUM(AllocationQty)` across
+   all `AllowSend='Y'` stores for the item (470 included); "shortage" = demand - `DC_Qty`. Two
+   stages, run in this order (renamed 2026-09-06 per Wesley - see the dedicated section below
+   for full mechanics and a worked example):
+   - **Initial Shortage Adjustment** (new 2026-09-06): only runs if shortage > 30 pcs. Softens
+     large shortages by proportionally trimming lower-priority groups' *base* allocation qty
+     (before re-netting/case-rounding) before the final cap runs, so a big shortage doesn't
+     necessarily mean dozens of low-priority stores get zeroed outright.
+   - **Final Shortage Adjustment** (renamed from "the waterfall cap" - mechanism itself
+     unchanged): store-priority order is **470 (Ecommerce) always first**, then every other
+     store in ascending order of `Pattern_Store_Group.Rank` for that item's DCS Pattern
+     (replaced Store Group order + StoreCode tie-break entirely, 2026-09-05 - see
+     `data-sources.md`). Any store missing from `Pattern_Store_Group` for that pattern falls
+     back to rank 999 (shouldn't occur today). Walk stores in that order keeping a running
+     total of case-qty-rounded allocation; a store gets its full allocation only if the running
+     total (including that store) is still <= `DC_Qty`. The moment a store can't be fully
+     covered, that store AND every lower-priority store after it gets 0 - no partial fill, no
+     skipping ahead. Validated: in the 788-item test set (pre-Initial-Shortage-Adjustment), 390
+     items needed capping, 0 exceeded `DC_Qty` after (~78% average DC-supply utilization among
+     capped items). Re-checked after the 2026-09-05 rank change on item 96443: same total units
+     shipped (60) but a *different* set of 5 stores served - confirms the reordering is real.
+
+## Initial Shortage Adjustment (added 2026-09-06)
+
+Per Wesley: when an item's shortage (demand - `DC_Qty`, see step 7 above) is 30 pcs or less, go
+straight to the Final Shortage Adjustment (the waterfall) as before - no change. When shortage
+exceeds 30 pcs, soften it first by trimming lower-priority groups' *base* allocation qty (i.e.
+`BaseAllocationQty`, before on-hand netting/case-rounding - **not** the final case-rounded
+`AllocationQty`) so the waterfall doesn't have to zero out as many stores outright.
+
+**Mechanics**, per item:
+1. Walk groups in this order: **E -> D -> C -> B -> A3 -> A2 -> A1** (470 is never a target - it
+   has no Store Group, so it's naturally skipped; its qty still counts toward demand, per
+   Wesley, since it's real consumption of the same DC supply).
+2. At each group step: cut every store in that group's `BaseAllocationQty` by 5%, **floored to
+   the nearest whole number**, compounding off whatever the value *currently* is (not the
+   original) - so a second pass over a group cuts another 5% off the already-reduced number, not
+   10% off the original. Then re-net against On-Hand+In-Transit (floored at 0, per the existing
+   rule above) and re-apply case-qty rounding exactly as normal - **the case rule is never
+   broken**; only the pre-netting base number is smaller going in. The qty allocated to a group
+   at this stage can be any positive value; only the *final* allocation (after netting) must be
+   a case multiple.
+3. Recompute demand and shortage after every single group step. The moment shortage <= 30,
+   **stop immediately** (even mid-sequence) and move to the Final Shortage Adjustment using
+   whatever `AllocationQty` values currently stand.
+4. If a full E->A1 pass finishes and shortage is still > 30, loop back to E and keep compounding.
+   A step that lands on a group with nothing left to reduce (e.g. every store's on-hand already
+   covers its base qty) is a legitimate no-op - progress comes from whichever step in the
+   sequence actually has room to cut.
+
+Implemented in `usp_RunAllocation` (`sql/015_add_initial_shortage_adjustment.sql`) as a cursor
+over items with shortage > 30, with a nested loop over the 7-group sequence and a safety cap of
+200 full cycles (1,400 steps) to prevent a true infinite loop in a pathological case - not
+expected to matter in practice.
+
+**Worked/validated example, item 96800** (DC_Qty=22): demand started at 53 (shortage 31, just
+over the threshold). Step 1 (group E) was a genuine no-op - every E store's on-hand already
+covered its tiny base qty (1), so cutting base 1 -> 0 changed nothing. Step 2 (group D) cut
+base 2 -> 1 for all 20 D stores; after re-netting, all but one dropped to 0 (one store, with
+zero on-hand, went from 2 to 1), demand fell to 42, shortage to 20 (<=30) - **stopped after just
+2 of the 7 possible steps**, C/B/A3/A2/A1 untouched. The Final Shortage Adjustment then capped
+the resulting 42 down to exactly 22 (=`DC_Qty`) by rank order as usual. Also validated:
+0 of the 788 items still had shortage > 30 after this step ran (universal convergence, no item
+hit the safety cap); an item that started at shortage <= 30 (96144) had its `BaseAllocationQty`
+completely unchanged, confirming untouched items are truly left alone.
 
 ## Store 470 (Ecommerce) - separate weekly input, not the DCS/store-group calc
 
@@ -109,21 +151,26 @@ and Wesley finalizes it - lowering it only when DC supply is short (e.g. she ask
 ## Implementation note: views vs. tables
 
 Steps 1-6 are still pure views (`vw_AllocationBase`, `vw_AllocationDraft`) - cheap to query,
-recompute automatically as source data changes. Step 7 (the waterfall) needs a running total
-ordered by priority, which requires either a windowed `SUM() OVER (ORDER BY ...)` (not
-available - SQL Server 2008 R2, that's a 2012+ feature) or a correlated subquery per row. A
+recompute automatically as source data changes. Step 7 (the Final Shortage Adjustment) needs a
+running total ordered by priority, which requires either a windowed `SUM() OVER (ORDER BY ...)`
+(not available - SQL Server 2008 R2, that's a 2012+ feature) or a correlated subquery per row. A
 correlated subquery against the *view* stack was fine for one item but timed out as a full
 788-item batch (SQL Server 2008 R2's optimizer doesn't push the per-item filter down through
-several stacked views efficiently). So the waterfall is implemented as a stored procedure,
-`usp_RunAllocation`, which:
+several stacked views efficiently). So both shortage-adjustment stages are implemented in a
+stored procedure, `usp_RunAllocation`, which:
 1. Materializes `vw_AllocationDraft` into a real table, `AllocationDraft` (clustered index on
    ItemCode+StoreCode - makes the per-item correlated subquery cheap).
-2. Computes the waterfall against that table, writing final results to `AllocationResults`.
+2. Runs the Initial Shortage Adjustment (a cursor over items with shortage > 30, see above),
+   mutating `AllocationDraft.BaseAllocationQty`/`AllocationQty` in place where needed.
+3. Runs the Final Shortage Adjustment against that table, writing results to `AllocationResults`.
 
 Run it with `EXEC usp_RunAllocation` after importing a new weekly item list, or whenever
-exclusion rules / reference tables change. Takes about a minute over 788 items x 144 stores.
+exclusion rules / reference tables change. Takes roughly a minute over 788 items x 144 stores
+(the Initial Shortage Adjustment cursor added ~30s of that, 2026-09-06).
 `AllocationResults.FinalAllocationQty` is the actual "what to ship" number; `AllocationQty` on
-that same table is the pre-cap desired amount (kept for visibility/debugging).
+that same table is the pre-cap desired amount (kept for visibility/debugging) - post-Initial-
+Shortage-Adjustment where that ran, i.e. it may already be lower than the "natural" unadjusted
+need for an item that had a large shortage.
 
 ## On-hand and in-transit qty (resolved 2026-09-05 - previously a placeholder)
 
