@@ -297,3 +297,47 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   BaseAllocationQty completely unchanged, confirming untouched items are genuinely left alone.
 - Docs updated: business-rules.md (new dedicated section + renamed references throughout),
   progress-log.md.
+
+## 2026-09-06 (cont. 2)
+
+- **Full weekly data refresh**, per Wesley: new versions of `Items_for_Replenishment` (960
+  records), `Item_Code_allocation_table` (806 records), `Stores_Qtys_and_MinMax` (139,200
+  records), and `Ecommerce_Allocation_Request` (30 records). Validated each file (no
+  duplicates, no bad values, row counts matching what Wesley stated) before importing; all four
+  imports matched exactly. Re-ran `usp_RunAllocation` (38.2s): 960 items, 138,240 result rows,
+  9,227 rows blocked by exclusions, 87,466 units shipped, 288 items needed shortage adjustment.
+- Investigated the one item (`3786`) that still showed shortage > 30 after the Initial Shortage
+  Adjustment ran, rather than assume it was a bug: its entire demand (54 units) was store 470's
+  own Ecommerce request, `DC_Qty` this week only 18 - since 470 is deliberately excluded from
+  the Initial Shortage Adjustment and no other group had any demand to trim, this item
+  legitimately skips that step and falls straight to the Final Shortage Adjustment, which (under
+  the *then-current* all-or-nothing rule) shipped 0. This investigation is what surfaced the
+  "no partial fill" misunderstanding - see below.
+
+## 2026-09-06 (cont. 3)
+
+- **Corrected a misunderstanding in the Final Shortage Adjustment**, per Wesley: "no partial
+  fill" does not mean a store gets its full need or nothing - a store can receive a partial
+  fill, as long as the amount shipped is a whole multiple of the case qty. Redefined the
+  waterfall to walk stores in the same priority order as before, but now ship
+  `FLOOR(MIN(need, remaining supply) / QTY_PER_CASE) * QTY_PER_CASE` per store and keep walking
+  to the next store with whatever supply remains, rather than zeroing every store once one
+  can't be fully covered. Confirmed with Wesley this applies to every store (not just 470) and
+  that the waterfall should keep walking after a partial fill.
+  - Added `LeftoverQty` and `DCQtyNotCaseMultiple` columns to `AllocationResults` - the latter
+    flags items where `DC_Qty` isn't a whole multiple of `QTY_PER_CASE`, meaning some DC
+    inventory can structurally never be shipped to anyone.
+  - Implemented in `sql/016_add_case_aligned_partial_fill.sql`: a single forward-only cursor
+    over a working table of all eligible item/store rows (ordered by ItemCode, GroupRank,
+    StoreCode), resetting a running "remaining supply" counter whenever ItemCode changes - one
+    pass over ~138k rows, not a cursor per item. Added negligible time to the run (~40s total,
+    same order as before).
+  - **Validated against real data**: item `3786` (store 470 requests 54, `DC_Qty`=18, case
+    qty=18) now ships 18 instead of 0 - matches Wesley's worked example A exactly, using a real
+    production item. Item `80680` confirmed the "keep walking" behavior (470 gets a partial 6 of
+    its 12 need; every other store correctly gets 0 since nothing remains). Item `98219`
+    (`DC_Qty`=214, case qty=6, structurally 4 pcs always left over) correctly flagged
+    `DCQtyNotCaseMultiple='Y'` with `LeftoverQty`=4. Across the full 960-item run: 21 items
+    flagged, 54 rows got a genuine partial fill, total units shipped rose from 87,466 to 87,597.
+  - Docs updated: business-rules.md (corrected the original wrong description, added a
+    dedicated section with worked examples), data-sources.md, progress-log.md.

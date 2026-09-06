@@ -49,19 +49,12 @@ simply weren't in this week's set).
      large shortages by proportionally trimming lower-priority groups' *base* allocation qty
      (before re-netting/case-rounding) before the final cap runs, so a big shortage doesn't
      necessarily mean dozens of low-priority stores get zeroed outright.
-   - **Final Shortage Adjustment** (renamed from "the waterfall cap" - mechanism itself
-     unchanged): store-priority order is **470 (Ecommerce) always first**, then every other
-     store in ascending order of `Pattern_Store_Group.Rank` for that item's DCS Pattern
-     (replaced Store Group order + StoreCode tie-break entirely, 2026-09-05 - see
+   - **Final Shortage Adjustment** (renamed from "the waterfall cap"; **mechanism corrected
+     2026-09-06** - see below): store-priority order is **470 (Ecommerce) always first**, then
+     every other store in ascending order of `Pattern_Store_Group.Rank` for that item's DCS
+     Pattern (replaced Store Group order + StoreCode tie-break entirely, 2026-09-05 - see
      `data-sources.md`). Any store missing from `Pattern_Store_Group` for that pattern falls
-     back to rank 999 (shouldn't occur today). Walk stores in that order keeping a running
-     total of case-qty-rounded allocation; a store gets its full allocation only if the running
-     total (including that store) is still <= `DC_Qty`. The moment a store can't be fully
-     covered, that store AND every lower-priority store after it gets 0 - no partial fill, no
-     skipping ahead. Validated: in the 788-item test set (pre-Initial-Shortage-Adjustment), 390
-     items needed capping, 0 exceeded `DC_Qty` after (~78% average DC-supply utilization among
-     capped items). Re-checked after the 2026-09-05 rank change on item 96443: same total units
-     shipped (60) but a *different* set of 5 stores served - confirms the reordering is real.
+     back to rank 999 (shouldn't occur today).
 
 ## Initial Shortage Adjustment (added 2026-09-06)
 
@@ -107,6 +100,65 @@ the resulting 42 down to exactly 22 (=`DC_Qty`) by rank order as usual. Also val
 hit the safety cap); an item that started at shortage <= 30 (96144) had its `BaseAllocationQty`
 completely unchanged, confirming untouched items are truly left alone.
 
+## Final Shortage Adjustment (mechanism corrected 2026-09-06)
+
+**Correction to how this was originally described:** "no partial fill" does **not** mean a store
+gets its full need or nothing. It means a store *can* receive a partial fill, as long as the
+amount shipped is always a whole multiple of the item's case qty - cases can never be broken,
+but that's a separate rule from "does a store get some vs none."
+
+**Mechanics**, per item, walking stores in the same priority order as always (470 first, then
+ascending `Pattern_Store_Group.Rank`): keep a running "remaining supply" counter starting at
+`DC_Qty`. At each store's turn, ship as many full cases as remaining supply allows, up to that
+store's own need:
+
+```
+ShipQty = FLOOR(MIN(need, remaining) / QTY_PER_CASE) * QTY_PER_CASE
+```
+
+then subtract `ShipQty` from remaining supply and move on to the **next** store - even a store
+that couldn't be fully covered doesn't block lower-priority stores from getting whatever's left.
+Confirmed with Wesley: this applies to **every** store (not just 470), and the waterfall keeps
+walking after a partial fill rather than zeroing everyone remaining. In practice, since
+`QTY_PER_CASE` is an item-level property (the same for every store of that item), there's at
+most one "transition" store per item where a partial fill happens - every store after it
+necessarily gets 0 too, because remaining supply drops below one case at that point. The
+difference from the old (wrong) behavior is that the transition store itself gets its
+case-aligned partial share instead of a hard zero.
+
+**New columns on `AllocationResults`:**
+- **`LeftoverQty`** - `DC_Qty` minus everything actually shipped for the item. `0` if fully
+  consumed in whole cases; a genuine surplus if demand < `DC_Qty`; or a "stuck" sub-case
+  fragment that structurally can never be shipped to anyone, when `DCQtyNotCaseMultiple = 'Y'`
+  and demand was large enough to exhaust every full case.
+- **`DCQtyNotCaseMultiple`** - `'Y'` if `DC_Qty` itself isn't a whole multiple of `QTY_PER_CASE`
+  for that item. This is a real data-quality flag worth a look - it means some DC inventory can
+  never be shipped to any store no matter how demand plays out, independent of whether a
+  shortage even occurs this week.
+
+**Validated against real data (2026-09-06):**
+- **Item `3786`** (the exact example that surfaced this correction): store 470 requested 54,
+  `DC_Qty` = 18, case qty = 18. Old (wrong) behavior shipped 0. Corrected behavior ships **18**
+  (one full case) - matches Wesley's worked example A exactly, using real production data.
+- **Item `80680`**: store 470 needed 12 (2 cases), only 6 available (case qty 6) - ships 6 (the
+  transition/partial store). Every other store for this item then correctly gets 0, since
+  remaining supply is exactly 0 afterward.
+- **Item `98219`**: `DC_Qty` = 214, case qty = 6 (214 = 35 full cases + 4 left over). Correctly
+  flagged `DCQtyNotCaseMultiple = 'Y'` with `LeftoverQty` = 4 - a genuine stuck fragment, not a
+  bug.
+- Across the full 960-item run: 21 items flagged `DCQtyNotCaseMultiple = 'Y'`; 54 item/store rows
+  received a genuine partial (nonzero but less-than-full) fill; total units shipped rose from
+  87,466 to 87,597 (+131) compared to the old all-or-nothing rule, since partial-fill cases that
+  used to ship 0 now correctly ship whatever full cases fit.
+
+Implemented in `usp_RunAllocation` (`sql/016_add_case_aligned_partial_fill.sql`). This needs
+genuine sequential processing - each store's shipped amount depends on the cumulative *actual*
+(case-floored) amount already shipped to every higher-priority store for that item, which can't
+be expressed as a single set-based aggregate because of the non-linear `FLOOR()` applied at
+every step. Uses one forward-only cursor over all items/stores at once (ordered by ItemCode,
+GroupRank, StoreCode), resetting the running counter whenever ItemCode changes - a single pass,
+not a cursor per item.
+
 ## Store 470 (Ecommerce) - separate weekly input, not the DCS/store-group calc
 
 **Resolved 2026-09-01** (was open since 2026-08-27): store 470 does not go through steps 1-3
@@ -134,39 +186,47 @@ and Wesley finalizes it - lowering it only when DC supply is short (e.g. she ask
   case-aligned (confirmed: all 57 nonzero rows in the sample file were exact multiples of
   `CASE_QTY`). The 12 exclusion rules (`AllowSend`) **still apply** to 470 - per Netto, Wesley's
   list curation mostly filters dead/blocked items before Dawn sees them, but the rule check
-  stays as a safety net. 470 keeps its rank-0 priority in the waterfall (step 7), so its
-  requested qty is still subject to the same all-or-nothing DC-qty cap as every other store.
-- **Validated** against the real files (2026-09-01): 57 items requested for 470; 44 got a
-  nonzero final allocation (424 units total); 0 blocked by exclusions. Of the 13 that got zero:
-  11 simply weren't in that week's `ItemReplenishment` set (different snapshot dates between
-  the two source files - expected); 2 (items 97352, 97360) were the exact "requested qty >
-  sample-file DC Supply" anomaly flagged in `open-questions.md` when the sample was first
-  inspected - confirmed here as **not a bug**: this week's real `ItemReplenishment.DC_Qty` for
-  both is 4, requested qty was 6, so the existing waterfall cap (rank 0, no partial fill)
-  correctly zeroes 470 out for those two rather than over-shipping. This suggests the
-  "DC Supply" column in the buyer-review workbook can be a stale snapshot relative to the
-  current week's real DC quantity - worth confirming with Wesley if it becomes a recurring
-  pattern, but not blocking.
+  stays as a safety net. 470 keeps its rank-0 priority in the Final Shortage Adjustment, so its
+  requested qty is still subject to the same case-aligned cap as every other store (see the
+  corrected mechanics below - this was written before the 2026-09-06 correction).
+- **Validated** against the real files (2026-09-01, under the rules in effect *at the time* -
+  the old, since-corrected all-or-nothing rule): 57 items requested for 470; 44 got a nonzero
+  final allocation (424 units total); 0 blocked by exclusions. Of the 13 that got zero: 11 simply
+  weren't in that week's `ItemReplenishment` set (different snapshot dates between the two
+  source files - expected); 2 (items 97352, 97360) were the exact "requested qty > sample-file
+  DC Supply" anomaly flagged in `open-questions.md` when the sample was first inspected -
+  confirmed at the time as **not a bug**: that week's real `ItemReplenishment.DC_Qty` for both
+  was 4, requested qty was 6. Under today's corrected Final Shortage Adjustment, a case
+  matching those quantities could now ship a case-aligned partial amount instead of a hard
+  zero - see the dedicated section below. This suggests the "DC Supply" column in the buyer-
+  review workbook can be a stale snapshot relative to the current week's real DC quantity -
+  worth confirming with Wesley if it becomes a recurring pattern, but not blocking.
 
 ## Implementation note: views vs. tables
 
 Steps 1-6 are still pure views (`vw_AllocationBase`, `vw_AllocationDraft`) - cheap to query,
 recompute automatically as source data changes. Step 7 (the Final Shortage Adjustment) needs a
 running total ordered by priority, which requires either a windowed `SUM() OVER (ORDER BY ...)`
-(not available - SQL Server 2008 R2, that's a 2012+ feature) or a correlated subquery per row. A
-correlated subquery against the *view* stack was fine for one item but timed out as a full
-788-item batch (SQL Server 2008 R2's optimizer doesn't push the per-item filter down through
-several stacked views efficiently). So both shortage-adjustment stages are implemented in a
-stored procedure, `usp_RunAllocation`, which:
+(not available - SQL Server 2008 R2, that's a 2012+ feature) or genuinely sequential processing
+(each store's shipped amount depends on the cumulative *actual*, case-floored amount already
+shipped to every higher-priority store - not expressible as a single set-based aggregate). So
+both shortage-adjustment stages are implemented in a stored procedure, `usp_RunAllocation`,
+which:
 1. Materializes `vw_AllocationDraft` into a real table, `AllocationDraft` (clustered index on
-   ItemCode+StoreCode - makes the per-item correlated subquery cheap).
+   ItemCode+StoreCode - makes the per-item correlated subquery in stage 2 cheap).
 2. Runs the Initial Shortage Adjustment (a cursor over items with shortage > 30, see above),
    mutating `AllocationDraft.BaseAllocationQty`/`AllocationQty` in place where needed.
-3. Runs the Final Shortage Adjustment against that table, writing results to `AllocationResults`.
+3. Runs the Final Shortage Adjustment: builds a working table (`#Plan`) of every eligible
+   item/store row with its priority rank, then walks it with a single forward-only cursor
+   (ordered by ItemCode, GroupRank, StoreCode), resetting a running "remaining supply" counter
+   whenever ItemCode changes - one pass over ~138k rows, not a cursor per item. Writes results
+   to `AllocationResults`, including the new `LeftoverQty`/`DCQtyNotCaseMultiple` columns.
 
 Run it with `EXEC usp_RunAllocation` after importing a new weekly item list, or whenever
-exclusion rules / reference tables change. Takes roughly a minute over 788 items x 144 stores
-(the Initial Shortage Adjustment cursor added ~30s of that, 2026-09-06).
+exclusion rules / reference tables change. Takes roughly 40s over 960 items x 144 stores as of
+2026-09-06 (both the Initial Shortage Adjustment cursor and the Final Shortage Adjustment's
+single-pass cursor included - the latter turned out cheap since it's one flat pass rather than
+a cursor per item).
 `AllocationResults.FinalAllocationQty` is the actual "what to ship" number; `AllocationQty` on
 that same table is the pre-cap desired amount (kept for visibility/debugging) - post-Initial-
 Shortage-Adjustment where that ran, i.e. it may already be lower than the "natural" unadjusted
