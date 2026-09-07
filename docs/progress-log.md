@@ -341,3 +341,39 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
     flagged, 54 rows got a genuine partial fill, total units shipped rose from 87,466 to 87,597.
   - Docs updated: business-rules.md (corrected the original wrong description, added a
     dedicated section with worked examples), data-sources.md, progress-log.md.
+
+## 2026-09-06 (cont. 4)
+
+- **Defined the weekly deliverable format**, per Wesley - the first concrete answer to the
+  long-standing "app itself" open question (how Wesley actually runs the process day to day is
+  still CLI scripts, unchanged). Two CSV exports:
+  - `Final_Allocation_Results.csv` (`scripts/export-final-allocation-results.js`):
+    `StoreCode`/`ItemCode`/`Qty`, nonzero shipments only.
+  - `DC_ItemsCheck_NotCaseMultiple.csv` (`scripts/export-dc-items-not-case-multiple.js`):
+    `ItemCode`/`DCLeftOverQty`/`DCQtyNotCaseMultiple`, only items flagged `Y`. Verified against
+    item 98219 (Wesley's own worked example): `DCLeftOverQty`=4, `DCQtyNotCaseMultiple`='Y' -
+    matches exactly.
+  - Ran both against the current 960-item data: 17,674 nonzero shipment rows, 21 items flagged
+    for the case-multiple check. Both output files added to `.gitignore` (generated, not source
+    data). Also kept the earlier broader diagnostic export
+    (`scripts/export-allocation-results.js`) as a separate debugging tool, not one of the two
+    official deliverables.
+  - Docs updated: business-rules.md, data-sources.md (new "Weekly output" sections),
+    open-questions.md (partially resolves "the app itself"), progress-log.md.
+
+## 2026-09-06 (cont. 5)
+
+- **Replaced `DC_ItemsCheck_NotCaseMultiple.csv` with `DCQty_Less_than_CaseQty.csv`**, per
+  Wesley - a stricter, more useful definition. The old flag (`DCQtyNotCaseMultiple`) fired
+  whenever `DC_Qty` itself wasn't a case multiple, even if the actual leftover after allocation
+  ended up large (a genuine surplus, not a problem). The new flag
+  (`DCQtyLessThanCaseQty` = `'Y'`) only fires when `0 < LeftoverQty < QTY_PER_CASE` - a real,
+  small, stuck fragment. Confirmed with Wesley that `LeftoverQty = 0` (perfect utilization)
+  should NOT be flagged, even though it technically satisfies "less than case qty" literally.
+  - Deleted `scripts/export-dc-items-not-case-multiple.js`; added
+    `scripts/export-dc-qty-less-than-case-qty.js`.
+  - Ran against current data: **7 items** flagged (down from 21 under the old definition).
+    Verified item 98219 (Wesley's own example) still correctly shows `DCLeftOverQty`=4,
+    `DCQtyLessThanCaseQty`='Y'.
+  - `.gitignore` updated (old output filename removed, new one added).
+  - Docs updated: business-rules.md, data-sources.md, open-questions.md, progress-log.md.

@@ -34,6 +34,21 @@ All DDL lives in `sql/`, applied in numeric order via `node scripts/run-sql.js s
 | `AllocationResults` | table | **Final output.** Same columns as `AllocationDraft` plus `GroupRank`, `RunningTotal`, `FinalAllocationQty` (the real "what to ship" number, after the Final Shortage Adjustment - see `business-rules.md`), and (added 2026-09-06) `LeftoverQty`/`DCQtyNotCaseMultiple` (per-item leftover DC supply and a flag for items where `DC_Qty` isn't a whole case multiple). Written by `usp_RunAllocation`. |
 | `usp_RunAllocation` | procedure | Runs the full pipeline: materializes `vw_AllocationDraft` into `AllocationDraft`, runs the Initial Shortage Adjustment (for items with shortage > 30 pcs), then the Final Shortage Adjustment (case-aligned partial-fill waterfall by `Pattern_Store_Group.Rank`) into `AllocationResults`. Call after importing a new weekly item list (or any other input) or after any reference-data/rule change. ~40s over 960 items x 144 stores as of 2026-09-06. |
 
+## Weekly output (deliverables)
+
+Run these after `usp_RunAllocation` to produce the actual weekly deliverables (2026-09-06, per
+Wesley - see `business-rules.md` for the exact column definitions):
+
+| Script | Output file | Shape |
+|---|---|---|
+| `scripts/export-final-allocation-results.js [file.csv]` | `Final_Allocation_Results.csv` (default name) | Long format, nonzero shipments only: `StoreCode`, `ItemCode`, `Qty` (= `FinalAllocationQty`). |
+| `scripts/export-dc-qty-less-than-case-qty.js [file.csv]` | `DCQty_Less_than_CaseQty.csv` (default name) | Long format, one row per item where `0 < LeftoverQty < QTY_PER_CASE` only (a genuine stuck fragment - `LeftoverQty = 0` not flagged): `ItemCode`, `DCLeftOverQty` (= `LeftoverQty`), `DCQtyLessThanCaseQty` (always `'Y'` for listed rows). Replaces the earlier, broader `DC_ItemsCheck_NotCaseMultiple.csv` (2026-09-06). |
+
+Both output files are gitignored (regenerated fresh each run, not source data). There's also a
+broader diagnostic export, `scripts/export-allocation-results.js` (adds item description, DCS
+code, `DC_Qty`; supports `--all` to include zero-qty rows) - useful for debugging, not one of the
+two official deliverables above.
+
 ## Key tables in `EBT` we depend on
 
 | Table/view | Type | What we use it for |

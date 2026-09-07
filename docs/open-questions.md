@@ -84,6 +84,11 @@ Things we don't have answers for yet. Don't guess at these - ask Netto/Wesley.
   Not really an open question anymore, logged here for traceability.
 - **The app itself.** No decision yet on what "the app" looks like for Wesley to use day to day
   (chat interface? something else?). Don't build UI/product surface without checking first.
+  **Partially resolved 2026-09-06:** the weekly *output* format is now defined - two CSV
+  exports, `Final_Allocation_Results.csv` and `DCQty_Less_than_CaseQty.csv` (see
+  `data-sources.md`/`business-rules.md`). Still open: how Wesley actually *runs* the weekly
+  process day to day (still CLI scripts today) and whether that becomes a UI/chat interface
+  later.
 - **`ItemReplenishment` import cadence/ownership.** Confirmed: Wesley will keep manually
   building the SAP-filtered item list for now; we just import it (`scripts/import-item-
   replenishment.js`). Automating *that* filtering step is explicitly a "later" item, not now.

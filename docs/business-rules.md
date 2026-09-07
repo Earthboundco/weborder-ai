@@ -253,3 +253,29 @@ usable stock." `NetNeed` itself is still separately floored at 0 as before. Impl
 `sql/010_floor_onhand_plus_intransit.sql`, carried forward in `sql/011_add_store_item_inventory_table.sql`.
 Store 470 (Ecommerce) is unaffected either way - it already skips on-hand/in-transit netting
 entirely (see below).
+
+## Weekly deliverables (defined 2026-09-06)
+
+After `usp_RunAllocation`, two CSV exports are the actual weekly output handed off downstream
+(per Wesley - this is the first concrete answer to the "app itself" open question, though how
+Wesley runs the process day to day is still CLI scripts, unchanged):
+
+1. **`Final_Allocation_Results.csv`** (`scripts/export-final-allocation-results.js`) - the "what
+   to ship" list. Long format, `StoreCode`/`ItemCode`/`Qty` (`Qty` = `FinalAllocationQty`), only
+   rows with a nonzero shipment (a store/item combo shipping nothing isn't actionable output).
+2. **`DCQty_Less_than_CaseQty.csv`** (`scripts/export-dc-qty-less-than-case-qty.js`) - a
+   data-quality check list. Long format, `ItemCode`/`DCLeftOverQty`/`DCQtyLessThanCaseQty`.
+   `DCLeftOverQty` is that item's DC backstock remaining after this week's allocation
+   (`AllocationResults.LeftoverQty`). `DCQtyLessThanCaseQty` = `'Y'` only when
+   `0 < DCLeftOverQty < QTY_PER_CASE` - a genuine stuck fragment too small to ever ship as a
+   full case (`LeftoverQty = 0`, i.e. perfect utilization, is **not** flagged). Only rows where
+   the flag is `'Y'` are listed. E.g. item 98219: `DC_Qty` 214, 210 allocated, 4 left over; case
+   qty 6, and 4 is both nonzero and less than 6, so it's flagged (`DCLeftOverQty`=4). **Replaces
+   the earlier, broader `DC_ItemsCheck_NotCaseMultiple.csv`/`DCQtyNotCaseMultiple` export**
+   (2026-09-06) - that one flagged any item where `DC_Qty` itself wasn't a case multiple, even
+   when the actual leftover ended up large (a genuine surplus, not a stuck fragment). This
+   version only flags a real, small, unusable remainder - 7 items flagged vs. 21 under the old
+   definition, on the same data.
+
+Both scripts take an optional output path argument (default to the file names above in the
+current directory) and are gitignored as generated output, not source data.
