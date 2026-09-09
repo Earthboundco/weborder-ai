@@ -377,3 +377,19 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
     `DCQtyLessThanCaseQty`='Y'.
   - `.gitignore` updated (old output filename removed, new one added).
   - Docs updated: business-rules.md, data-sources.md, open-questions.md, progress-log.md.
+
+## 2026-09-09
+
+- **Documented the update cadence and ownership for every `assets/` source file**, per Wesley -
+  four tiers, from rarest to most frequent:
+  - **Eventually/never**: `DCS_Pattern` (only on a new DCS Code or Pattern).
+  - **Every ~8 weeks**: `Pattern_Store_Group` (once per launch/season period - Spring Break,
+    Summer 1, Back-to-School, Holidays, etc).
+  - **Weekly, any day Mon-Fri**: `Item_Code_allocation_table`, `DPS_Code_allocation_table`,
+    `Temporary_Blocking`.
+  - **Weekly, in order, Friday 4pm+/Saturday/Sunday**: `Items_for_Replenishment` (built right
+    after the DC's Friday 4pm SAP shipment-receiving cutoff) -> `Ecommerce_Allocation_Request`
+    (Dawn's ask, returned Fri night/Sat/Sun) -> `Stores_Qtys_and_MinMax` (built last, only once
+    the other files are ready - the final input before `usp_RunAllocation`).
+  - New section in `data-sources.md` ("Update cadence & ownership") is now the authoritative
+    reference for this; a couple of existing table rows there were cross-referenced to it.

@@ -15,7 +15,7 @@ All DDL lives in `sql/`, applied in numeric order via `node scripts/run-sql.js s
 
 | Object | Type | Purpose |
 |---|---|---|
-| `DCS_Pattern` | table | DCS Code -> DCS Pattern (47 rows, loaded from Wesley's mock file) |
+| `DCS_Pattern` | table | DCS Code -> DCS Pattern (47 rows, loaded from Wesley's mock file). Update cadence: eventually/never - see "Update cadence & ownership" below. |
 | `Pattern_Store_Group` | table | (DCS Pattern, Store Code) -> Store Group, plus `Rank` (1,529 rows = 11 patterns x 139 stores). `Rank` added 2026-09-05 - Wesley's explicit per-(Pattern, Store) priority (1-139, unique per pattern) for the DC-qty waterfall cut order (see `business-rules.md`); fully replaces Store Group for that purpose, though Store Group is still used for the base allocation qty lookup. Unique index on (`DCS pattern`, `Store code`). Refreshes every 6-8 weeks via `scripts/import-pattern-store-group.js` (truncate/reload, same pattern as the weekly inputs). |
 | `Item_Code_allocation_table` | table | (Item Code, Store Group) -> base allocation qty, item-specific override. **Weekly input as of 2026-09-05** (was a one-time load from Wesley's original mock file before this). Source: `assets/Item_Code_allocation_table.xlsx` - "wide" layout (one row per Item Code, one column per store group: A1/A2/A3/B/C/D/E), unpivoted into this long shape by `scripts/import-allocation-table.js item <file>`. |
 | `DPS_Code_allocation_table` | table | (DPS Code, Store Group) -> base allocation qty, the general case. **Weekly input as of 2026-09-05** (was a one-time load before this). Source: `assets/DPS_Code_allocation_table.xlsx`, same wide layout, unpivoted by `scripts/import-allocation-table.js dps <file>`. |
@@ -25,7 +25,7 @@ All DDL lives in `sql/`, applied in numeric order via `node scripts/run-sql.js s
 | `ItemInformation` | view | Item attributes needed downstream, straight from `EBT.dbo.Inventory_V_AUX`: DCS_CODE, ITEM_NO, DESCRIPTION1, LNCHCODE, IStatus, PRICE1/2, QTY_PER_CASE, MDQ, EBT_STR, EBTMKD, PROP65FAIL, ONLINE_STR, SIZ. This view **pre-existed** our work (built by someone else before we started). |
 | `ItemInformationComplete` | view | Builds on `ItemInformation`, adds the computed **DPS Code** (`DCS_CODE + '/' + PriceBucket + '/' + SizeBucket`) using hardcoded price-bucket and clothing-size-normalization logic. Also pre-existed. |
 | `ExclusionRules` | table | Metadata for the 14 exclusion rules - name, description, `IsActive` toggle. |
-| `Temporary_Blocking` | table | (Store, Item, Status) - feeds the Exc14 "Temporary Blocking" exclusion rule (added 2026-09-05/06, see `business-rules.md`): while an item is being tested at selected locations only, every other store gets a `Status='Block'` row here. Business Store Code + plain item code. Refreshes weekly or every other week via `scripts/import-temporary-blocking.js` (truncate/reload). |
+| `Temporary_Blocking` | table | (Store, Item, Status) - feeds the Exc14 "Temporary Blocking" exclusion rule (added 2026-09-05/06, see `business-rules.md`): while an item is being tested at selected locations only, every other store gets a `Status='Block'` row here. Business Store Code + plain item code. Refreshes weekly via `scripts/import-temporary-blocking.js` (truncate/reload), any day Monday-Friday - see "Update cadence & ownership" below. |
 | `vw_ExclusionEvaluation` | view | Per (item in `ItemReplenishment`) x (active real store), evaluates all 12 rules as Y/N columns. |
 | `vw_ItemStoreAllowSend` | view | Adds `AllowSend` roll-up (Y only if all 12 rules pass) on top of `vw_ExclusionEvaluation`. |
 | `vw_AllocationBase` | view | Per item x store: DCS Pattern, Store Group, and `BaseAllocationQty` (Item-specific override falling back to DPS-code level). |
@@ -33,6 +33,44 @@ All DDL lives in `sql/`, applied in numeric order via `node scripts/run-sql.js s
 | `AllocationDraft` | table | Materialized snapshot of `vw_AllocationDraft`, written by `usp_RunAllocation`. Exists purely for performance (see `business-rules.md` implementation note). |
 | `AllocationResults` | table | **Final output.** Same columns as `AllocationDraft` plus `GroupRank`, `RunningTotal`, `FinalAllocationQty` (the real "what to ship" number, after the Final Shortage Adjustment - see `business-rules.md`), and (added 2026-09-06) `LeftoverQty`/`DCQtyNotCaseMultiple` (per-item leftover DC supply and a flag for items where `DC_Qty` isn't a whole case multiple). Written by `usp_RunAllocation`. |
 | `usp_RunAllocation` | procedure | Runs the full pipeline: materializes `vw_AllocationDraft` into `AllocationDraft`, runs the Initial Shortage Adjustment (for items with shortage > 30 pcs), then the Final Shortage Adjustment (case-aligned partial-fill waterfall by `Pattern_Store_Group.Rank`) into `AllocationResults`. Call after importing a new weekly item list (or any other input) or after any reference-data/rule change. ~40s over 960 items x 144 stores as of 2026-09-06. |
+
+## Update cadence & ownership (per Wesley, 2026-09-09)
+
+When each `assets/` source file gets updated, why, and (for the weekend files) in what order.
+Four tiers, from rarest to most frequent:
+
+**A) Update eventually or never**
+
+| File / table | Update when |
+|---|---|
+| `DCS_Pattern` (DCS Code -> DCS Pattern link, feeds `Pattern_Store_Group`) | Only if a new DCS Code or a new DCS Pattern is introduced. |
+
+**B) Update every ~8 weeks**
+
+| File / table | Update when |
+|---|---|
+| `Pattern_Store_Group` (group + rank per store, per DCS Pattern) | Once per launch/season period - e.g. Spring Break, Summer 1, Back-to-School, Holidays. |
+
+**C) Update weekly, any day Monday-Friday**
+
+| File / table | What it is | Update when |
+|---|---|---|
+| `Item_Code_allocation_table` | Best sellers, store-specific items, and recently-distributed items, with specific (usually higher-than-`DPS_Code_allocation_table`) group allocation qtys. | As best sellers are identified, as more store-specific items come up, as new items get distributed, or as a distributed item rolls back to normal DPS-level qty. |
+| `DPS_Code_allocation_table` | The general-case group allocation qty for every DCS/Price/Size (DPS) code. | As adjustments are found necessary for any DPS code (qty per group increased or decreased). |
+| `Temporary_Blocking` | Store/item combos temporarily held back from allocation (e.g. an item being tested at selected locations only - every other store gets blocked). | As new store/item combos need to be added, or dropped once a test concludes. |
+
+**D) Update weekly, in this order: Friday after 4pm, Saturday, or Sunday**
+
+The DC's weekly SAP shipment cutoff is **Friday 4pm** - these three files depend on that
+cutoff and on each other, so they're built in this sequence:
+
+1. **`Items_for_Replenishment`** - items available in the DC and their qty, built once the DC
+   team has received all weekly shipments into SAP (right after the Friday 4pm cutoff).
+2. **`Ecommerce_Allocation_Request`** - what Ecommerce (Dawn) needs more of from DC stock,
+   returned Friday night, Saturday, or Sunday.
+3. **`Stores_Qtys_and_MinMax`** - DC item qty plus each store's on-hand/in-transit/min/max.
+   **Built last**, only once the other files are ready - it's the final input before running
+   the replenishment process (`EXEC usp_RunAllocation`).
 
 ## Weekly output (deliverables)
 
