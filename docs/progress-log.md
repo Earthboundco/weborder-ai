@@ -393,3 +393,22 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
     the other files are ready - the final input before `usp_RunAllocation`).
   - New section in `data-sources.md` ("Update cadence & ownership") is now the authoritative
     reference for this; a couple of existing table rows there were cross-referenced to it.
+
+## 2026-09-10
+
+- **Full weekly data refresh**, per Wesley - all 8 `assets/` source files updated at once,
+  including `DCS_Pattern` and `Pattern_Store_Group` (normally "eventually/never" and "every ~8
+  weeks" tier - unusual to see both change alongside the weekly files, flagged to Wesley,
+  confirmed intentional). Validated every file first (row counts, no duplicates, no bad values,
+  `Pattern_Store_Group` still 139 unique ranks 1-139 per pattern with no gaps) before importing.
+  `DCS_Pattern` never had an import script before (only ever loaded once at project start) -
+  built `scripts/import-dcs-pattern.js` to handle it, same truncate/reload pattern as the rest.
+- All 8 imports matched exactly: `DCS_Pattern` 47, `Pattern_Store_Group` 1,529,
+  `Item_Code_allocation_table` 806 items (5,642 unpivoted), `DPS_Code_allocation_table` 2,924
+  codes (20,468 unpivoted), `Temporary_Blocking` 493, `ItemReplenishment` 963 items,
+  `EcommerceAllocationRequest` 141 items (up sharply from 30 the prior week - flagged, not
+  investigated further), `StoreItemInventory` 139,635 rows.
+- Re-ran `usp_RunAllocation` (38.9s): 963 items, 138,672 result rows, 13,863 rows blocked by
+  exclusions, 111,375 units shipped. Generated both weekly deliverables:
+  `Final_Allocation_Results.csv` (22,848 nonzero shipment rows) and
+  `DCQty_Less_than_CaseQty.csv` (11 items flagged).
