@@ -412,3 +412,36 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   exclusions, 111,375 units shipped. Generated both weekly deliverables:
   `Final_Allocation_Results.csv` (22,848 nonzero shipment rows) and
   `DCQty_Less_than_CaseQty.csv` (11 items flagged).
+
+## 2026-09-10/12 - First full-week comparison against Wesley's manual process
+
+- Wesley ran his own manual weborder process in parallel for the same week and provided both
+  outputs (`Claude_WO_09-10-26.csv`, `Wes_WO_09-10-26.csv`) for comparison - the first real
+  validation of the automated pipeline against the real process it's meant to replace.
+- Built a rigorous key-by-key (StoreCode+ItemCode) comparison rather than eyeballing: 22,848 vs
+  22,832 rows, 70 discrepancies out of ~22,850 (~0.3%), total units within ~0.4%. Delivered as
+  `WO_Discrepancies_09-10-26.csv` (StoreCode/ItemCode/ClaudeQty/WesQty/Difference/
+  DiscrepancyType).
+- **Found and fixed a real data issue**: store 319 was assigned Store Group C in
+  `Pattern_Store_Group` for Pattern 01, but tracing 8 of the 70 discrepancies back to their
+  base-allocation-qty lookup showed they all matched exactly if store 319 were Group D instead -
+  confirmed against 3 different items with exact numeric matches before concluding it was a
+  data issue, not a coincidence. Wesley updated `Pattern_Store_Group.xlsx` (along with
+  `DCS_Pattern.xlsx` and `Item_Code_allocation_table.xlsx` - see next entry); re-running
+  resolved all 8 of those rows exactly.
+- **Traced the remaining discrepancies item by item** (97631, 38326, 97529 at two different
+  stores, 91101, 97536, 98408, 68651, 96897, 97654, 98577, 98225, plus all 5 store-470 rows)
+  and found a single consistent mechanism behind nearly all of them: at a DC-supply boundary in
+  the Final Shortage Adjustment, Wesley's manual number is the raw/unrounded leftover quantity,
+  while the pipeline correctly floors to the nearest full case (0 if less than one case). Store
+  470 initially looked like a pipeline bug (case-flooring applied where the base-calc stage
+  skips case-rounding) but **Wesley confirmed 2026-09-12 this is correct as-built** - the
+  Final Shortage Adjustment floors every store uniformly, 470 included, no exceptions. See the
+  new note in `business-rules.md`.
+- **Conclusion, confirmed by Wesley**: keep flooring to a case, uniformly, at every boundary -
+  do not change the pipeline to match the raw-leftover behavior. This is now documented as a
+  settled decision, not an open question.
+- Re-ran the comparison after the store 319 fix: 70 -> 16 discrepancies
+  (`WO_Discrepancies_09-12-26.csv`), all 8 store-319 rows resolved. All 16 remaining are
+  explained by the boundary-flooring mechanism above (confirmed correct, not a bug) - none are
+  unexplained.

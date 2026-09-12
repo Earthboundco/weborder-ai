@@ -126,6 +126,17 @@ necessarily gets 0 too, because remaining supply drops below one case at that po
 difference from the old (wrong) behavior is that the transition store itself gets its
 case-aligned partial share instead of a hard zero.
 
+**Confirmed 2026-09-12, per Wesley** (after comparing a full week's automated output against his
+manual process): the case-flooring rule applies **uniformly to every store, including 470**, and
+at every supply boundary - there is no exception where a store ships the raw/unrounded leftover
+instead of a floored case multiple. This came up because a week-over-week comparison surfaced
+~15 item/store combos where Wesley's manual number was a non-case-multiple "raw leftover" amount
+at exactly the point DC supply ran out (store 470 included) - initially mistaken for a bug in the
+pipeline (470 skipping case-flooring) or a business-rule gap worth fixing to match his numbers.
+Wesley confirmed neither: the pipeline's behavior (floor to a case, uniformly, no exceptions) is
+correct as built; his manual numbers diverging at those boundaries is expected and not something
+to replicate. Don't revisit this without a new instruction from Wesley.
+
 **New columns on `AllocationResults`:**
 - **`LeftoverQty`** - `DC_Qty` minus everything actually shipped for the item. `0` if fully
   consumed in whole cases; a genuine surplus if demand < `DC_Qty`; or a "stuck" sub-case
