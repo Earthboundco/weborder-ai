@@ -464,4 +464,23 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   `-0.999` became `0` instead of `-1`). Fixed `scripts/import-store-inventory.js` to
   `Math.round()` all four numeric fields before insert.
 - Re-imported, re-ran `usp_RunAllocation`, regenerated both deliverables, and re-ran the
-  comparison: discrepancies dropped from 26 to 12. Remaining 12 not yet individually traced.
+  comparison: discrepancies dropped from 26 to 12. Wesley annotated the 12 remaining directly
+  in the discrepancy CSV - all confirmed as the established case-flooring-at-a-boundary pattern
+  (e.g. "Wes allocating less than case qty", "470 got more than case qty... making the next
+  store get less than case qty") - nothing new, consistent with the 2026-09-12 finding.
+
+## 2026-09-19 (cont.) - Claude_results/ folder + standardized delivery naming
+
+- Per Wesley: created `Claude_results/` for all delivered files going forward (weekly
+  deliverables, discrepancy reports, anything requested). Gitignored in full - same treatment
+  the individual files already had. Also created `Wesley_tools/` (gitignored, personal-use
+  only - Netto also works from this repo).
+- New naming convention, date prefix first: `Final_Allocation_Results` ->
+  `<MM-DD-YY>-Final_Allocation_Results`, `DCQty_Less_than_CaseQty` ->
+  `<MM-DD-YY>-DC_Qty_Less_than_Case_Qty`, `WO_Discrepancies_<date>` ->
+  `<MM-DD-YY>-Discrepancies_Check`.
+- Updated both export scripts to default to `Claude_results/<today>-<Name>.csv` automatically
+  (no more manual renaming each week). Formalized the discrepancy-comparison logic - previously
+  a one-off scratchpad script re-created each session since 2026-09-10 - into a real checked-in
+  script, `scripts/compare-with-manual.js`, with the same default-naming behavior. Verified it
+  reproduces the same 12-row result as the session's manual comparison before relying on it.

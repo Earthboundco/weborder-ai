@@ -3,7 +3,8 @@ node_modules/
 .DS_Store
 assets/~$*
 
-# Generated weekly output - regenerated fresh each run, not source data
+# Generated weekly output - regenerated fresh each run, not source data. Also covers the old
+# undated filenames in case a script is ever run with no output path given.
 Final_Allocation_Results.csv
 DCQty_Less_than_CaseQty.csv
 final-allocation-sample.csv
@@ -11,3 +12,6 @@ WO_Discrepancies_*.csv
 
 # Wesley's personal working files - never shared/committed (Netto also works from this repo)
 /Wesley_tools/
+
+# Generated deliverables/reports handed to Wesley each run - regenerated fresh, not source data
+/Claude_results/

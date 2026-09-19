@@ -3,13 +3,24 @@
 // shipment are included - a store/item combo with nothing to ship isn't actionable output.
 //
 // Usage: node scripts/export-final-allocation-results.js [output.csv]
-// Defaults to Final_Allocation_Results.csv in the current directory.
+// Defaults to Claude_results/<MM-DD-YY>-Final_Allocation_Results.csv (Wesley's naming
+// convention, 2026-09-19 - date prefix, Claude_results/ is where all delivered files live).
 const fs = require('fs');
 const path = require('path');
 const { sql, getPool } = require('../db');
 
+function todayDateStr() {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const yy = String(d.getFullYear()).slice(-2);
+  return `${mm}-${dd}-${yy}`;
+}
+
 async function main() {
-  const outFile = process.argv[2] || 'Final_Allocation_Results.csv';
+  const outDir = path.resolve('Claude_results');
+  fs.mkdirSync(outDir, { recursive: true });
+  const outFile = process.argv[2] || path.join(outDir, `${todayDateStr()}-Final_Allocation_Results.csv`);
 
   const pool = await getPool();
   const result = await pool.request().query(`

@@ -75,17 +75,21 @@ cutoff and on each other, so they're built in this sequence:
 ## Weekly output (deliverables)
 
 Run these after `usp_RunAllocation` to produce the actual weekly deliverables (2026-09-06, per
-Wesley - see `business-rules.md` for the exact column definitions):
+Wesley - see `business-rules.md` for the exact column definitions). All three default to writing
+into **`Claude_results/`** (created if it doesn't exist), with Wesley's date-prefixed naming
+convention (2026-09-19): `<MM-DD-YY>-<Name>.csv`, using today's date.
 
-| Script | Output file | Shape |
+| Script | Default output | Shape |
 |---|---|---|
-| `scripts/export-final-allocation-results.js [file.csv]` | `Final_Allocation_Results.csv` (default name) | Long format, nonzero shipments only: `StoreCode`, `ItemCode`, `Qty` (= `FinalAllocationQty`). |
-| `scripts/export-dc-qty-less-than-case-qty.js [file.csv]` | `DCQty_Less_than_CaseQty.csv` (default name) | Long format, one row per item where `0 < LeftoverQty < QTY_PER_CASE` only (a genuine stuck fragment - `LeftoverQty = 0` not flagged): `ItemCode`, `DCLeftOverQty` (= `LeftoverQty`), `DCQtyLessThanCaseQty` (always `'Y'` for listed rows). Replaces the earlier, broader `DC_ItemsCheck_NotCaseMultiple.csv` (2026-09-06). |
+| `scripts/export-final-allocation-results.js [file.csv]` | `Claude_results/<date>-Final_Allocation_Results.csv` | Long format, nonzero shipments only: `StoreCode`, `ItemCode`, `Qty` (= `FinalAllocationQty`). |
+| `scripts/export-dc-qty-less-than-case-qty.js [file.csv]` | `Claude_results/<date>-DC_Qty_Less_than_Case_Qty.csv` | Long format, one row per item where `0 < LeftoverQty < QTY_PER_CASE` only (a genuine stuck fragment - `LeftoverQty = 0` not flagged): `ItemCode`, `DCLeftOverQty` (= `LeftoverQty`), `DCQtyLessThanCaseQty` (always `'Y'` for listed rows). Replaces the earlier, broader `DC_ItemsCheck_NotCaseMultiple.csv` (2026-09-06). |
+| `scripts/compare-with-manual.js <claude.csv> <wesley.csv> [out.csv]` | `Claude_results/<date>-Discrepancies_Check.csv` | Compares a Final_Allocation_Results-shaped file against Wesley's manual weborder output key-by-key (`StoreCode`+`ItemCode`): `StoreCode`, `ItemCode`, `ClaudeQty`, `WesQty`, `Difference`, `DiscrepancyType` (`Only in Claude` / `Only in Wes` / `Qty mismatch`). Formalized 2026-09-19 from a one-off comparison script used since the first Claude-vs-Wesley comparison (2026-09-10) - see `progress-log.md`. |
 
-Both output files are gitignored (regenerated fresh each run, not source data). There's also a
+`Claude_results/` is gitignored in full (regenerated/delivered output, not source data) - same
+treatment the three files already had individually before the folder existed. There's also a
 broader diagnostic export, `scripts/export-allocation-results.js` (adds item description, DCS
 code, `DC_Qty`; supports `--all` to include zero-qty rows) - useful for debugging, not one of the
-two official deliverables above.
+three deliverables above.
 
 ## Key tables in `EBT` we depend on
 

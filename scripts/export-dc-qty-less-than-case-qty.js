@@ -1,6 +1,7 @@
-// Exports DCQty_Less_than_CaseQty.csv - items with a genuinely stuck DC backstock fragment
-// after this week's allocation (2026-09-06, replaces the earlier DC_ItemsCheck_NotCaseMultiple
-// export, per Wesley). Long format: ItemCode, DCLeftOverQty, DCQtyLessThanCaseQty.
+// Exports the DC_Qty_Less_than_Case_Qty report - items with a genuinely stuck DC backstock
+// fragment after this week's allocation (2026-09-06, replaces the earlier
+// DC_ItemsCheck_NotCaseMultiple export, per Wesley). Long format: ItemCode, DCLeftOverQty,
+// DCQtyLessThanCaseQty.
 //
 // DCLeftOverQty is the item's DC backstock remaining after allocation (LeftoverQty in
 // AllocationResults). DCQtyLessThanCaseQty = 'Y' only when 0 < DCLeftOverQty < case qty - a
@@ -8,13 +9,24 @@
 // over, perfect utilization) is NOT flagged - per Wesley, only a real nonzero fragment counts.
 //
 // Usage: node scripts/export-dc-qty-less-than-case-qty.js [output.csv]
-// Defaults to DCQty_Less_than_CaseQty.csv in the current directory.
+// Defaults to Claude_results/<MM-DD-YY>-DC_Qty_Less_than_Case_Qty.csv (Wesley's naming
+// convention, 2026-09-19 - date prefix, Claude_results/ is where all delivered files live).
 const fs = require('fs');
 const path = require('path');
 const { sql, getPool } = require('../db');
 
+function todayDateStr() {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const yy = String(d.getFullYear()).slice(-2);
+  return `${mm}-${dd}-${yy}`;
+}
+
 async function main() {
-  const outFile = process.argv[2] || 'DCQty_Less_than_CaseQty.csv';
+  const outDir = path.resolve('Claude_results');
+  fs.mkdirSync(outDir, { recursive: true });
+  const outFile = process.argv[2] || path.join(outDir, `${todayDateStr()}-DC_Qty_Less_than_Case_Qty.csv`);
 
   const pool = await getPool();
   const result = await pool.request().query(`
