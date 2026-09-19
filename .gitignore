@@ -8,3 +8,6 @@ Final_Allocation_Results.csv
 DCQty_Less_than_CaseQty.csv
 final-allocation-sample.csv
 WO_Discrepancies_*.csv
+
+# Wesley's personal working files - never shared/committed (Netto also works from this repo)
+/Wesley_tools/

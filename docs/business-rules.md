@@ -265,6 +265,19 @@ usable stock." `NetNeed` itself is still separately floored at 0 as before. Impl
 Store 470 (Ecommerce) is unaffected either way - it already skips on-hand/in-transit netting
 entirely (see below).
 
+**Second import-time fix, found 2026-09-19:** `OnHandQty`/`InTransitQty`/`MinQty`/`MaxQty` are
+`int` columns, but the source file occasionally has floating-point-artifact values - not real
+fractional inventory, but an integer plus/minus a ~0.001 epsilon (e.g. `4.001`, `-0.999` instead
+of `4`, `-1`), almost certainly from a formula upstream in the source spreadsheet. The bulk-insert
+driver was truncating these toward zero when inserting into the `int` column (`-0.999` silently
+became `0`, not `-1`), rather than rounding - found via a real allocation discrepancy against
+Wesley's manual process: store 463/item 59014 had raw `OnHandQty` -0.999, truncated to 0, which
+understated the store's need by a full case (computed 6, correct answer 8, matching Wesley's
+number once fixed). 1,332 of 84,970 rows (~1.6%) in that week's file had this pattern. Fixed in
+`scripts/import-store-inventory.js` by explicitly `Math.round()`-ing all four numeric fields
+before insert, instead of passing the raw float through to the driver's own (truncating)
+conversion. Re-running after the fix dropped that week's discrepancy count from 26 to 12.
+
 ## Weekly deliverables (defined 2026-09-06)
 
 After `usp_RunAllocation`, two CSV exports are the actual weekly output handed off downstream

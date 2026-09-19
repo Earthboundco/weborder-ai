@@ -44,13 +44,21 @@ async function main() {
     const maxQ = maxCol ? row.getCell(maxCol).value : null;
 
     if ((typeof storeCode === 'string' || typeof storeCode === 'number') && typeof itemNo === 'number') {
+      // Round (don't truncate) - the source occasionally has floating-point-artifact values
+      // like 4.001 or -0.999 (an integer +/- a ~0.001 epsilon, not real fractional inventory).
+      // These go into `int` columns; passing the raw float lets the bulk-insert driver
+      // truncate toward zero instead (e.g. -0.999 -> 0, silently discarding that it was
+      // really -1), which is wrong. Math.round recovers the intended integer correctly for
+      // every case we've seen. Found 2026-09-19 via a real allocation discrepancy: store
+      // 463/item 59014 had OnHandQty -0.999 in the source, truncated to 0, which understated
+      // the store's need by one case (6 vs the correct 8) - see progress-log.md.
       rows.push({
         itemCode: String(itemNo),
         storeCode: String(storeCode),
-        onHandQty: typeof onHand === 'number' ? onHand : 0,
-        inTransitQty: typeof inTransit === 'number' ? inTransit : 0,
-        minQty: typeof minQ === 'number' ? minQ : null,
-        maxQty: typeof maxQ === 'number' ? maxQ : null,
+        onHandQty: typeof onHand === 'number' ? Math.round(onHand) : 0,
+        inTransitQty: typeof inTransit === 'number' ? Math.round(inTransit) : 0,
+        minQty: typeof minQ === 'number' ? Math.round(minQ) : null,
+        maxQty: typeof maxQ === 'number' ? Math.round(maxQ) : null,
       });
     }
   });

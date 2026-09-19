@@ -445,3 +445,23 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   (`WO_Discrepancies_09-12-26.csv`), all 8 store-319 rows resolved. All 16 remaining are
   explained by the boundary-flooring mechanism above (confirmed correct, not a bug) - none are
   unexplained.
+
+## 2026-09-19 - Weekly refresh (586 items) + on-hand rounding bug found and fixed
+
+- Full weekly data refresh: all 8 `assets/` files updated, item count dropped sharply to 586
+  (from 963) - validated internally consistent (`Stores_Qtys_and_MinMax` = 586 x 145 exactly,
+  no dupes/bad values) and flagged the drop to Wesley rather than assume. Deleted the unused
+  `assets/Weborder summary.xlsx` mockup (never referenced by any import script - harmless).
+  Re-ran `usp_RunAllocation` (30.8s): 586 items, 84,384 rows, 6,609 blocked, 58,554 shipped.
+- Wesley provided `WesWeborder.csv` (his manual process output) for comparison against
+  `Final_Allocation_Results.csv` - 26 discrepancies out of 16,218 (~0.16%), a much tighter
+  match than the first week's comparison.
+- Tracing store 463/item 59014 (a "Qty mismatch" row) surfaced a real import-pipeline bug, not
+  a snapshot-timing difference: **found and fixed the OnHandQty truncation issue** documented
+  in `business-rules.md` - 1,332 of that week's 84,970 `StoreItemInventory` rows had
+  floating-point-artifact on-hand values (`int` + ~0.001 epsilon) that were being truncated
+  toward zero on import instead of rounded, silently losing sign/magnitude information (e.g.
+  `-0.999` became `0` instead of `-1`). Fixed `scripts/import-store-inventory.js` to
+  `Math.round()` all four numeric fields before insert.
+- Re-imported, re-ran `usp_RunAllocation`, regenerated both deliverables, and re-ran the
+  comparison: discrepancies dropped from 26 to 12. Remaining 12 not yet individually traced.
