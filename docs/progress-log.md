@@ -484,3 +484,37 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   a one-off scratchpad script re-created each session since 2026-09-10 - into a real checked-in
   script, `scripts/compare-with-manual.js`, with the same default-naming behavior. Verified it
   reproduces the same 12-row result as the session's manual comparison before relying on it.
+
+## 2026-09-21
+
+- Confirmed the `claude` login can read `EBT.dbo.salesfact` (Wesley: contains all sales
+  history, going back to at least 2004 - `STORE_NO`/`ITEM_NO`/`DATE`/`WEEK`/`MONTH`/`YEAR`/
+  `SOLD_QTY`/`EXT_PRICE`/`EXT_COST`/`EXT_LCO`/`LCO_PROBLEMS`). Note `STORE_NO` is the internal
+  store number, not the business Store Code used elsewhere in this project - same two-numbering-
+  systems gotcha as `[Store Directory]`. Documented in `data-sources.md`. Not yet used by any
+  part of the pipeline - flagged as a potential future source for demand-based allocation logic.
+- Wesley: for inventory (item master) data, use `EBT.dbo.INVENTORY_V` going forward. Inspected
+  it - item-attribute view (`ITEM_NO`, `VEND_CODE`, `DCS_CODE`, descriptions, `QTY_PER_CASE`,
+  prices/costs, key dates, etc), no store-level on-hand/in-transit columns, so this doesn't
+  affect the on-hand/in-transit source decision (still the manual `StoreItemInventory` weekly
+  input). Documented in `data-sources.md`. Not yet wired into `ItemInformation`/
+  `ItemInformationComplete` (still read from `Inventory_V_AUX`/`INVENTORY`) - flagged as a
+  follow-up, didn't want to change the live views without confirming that's actually wanted.
+- Wesley confirmed `EBT.dbo.[Store Directory]` as the store-directory source - matches what was
+  already documented/used (`[Store Directory]`, see the "Key tables in EBT" table above), no
+  change needed, just noted the confirmation in `data-sources.md`.
+
+## 2026-09-26
+
+- Weekly data refresh (all 8 `assets/` files): 615 items (up from 586), validated clean before
+  importing. Re-ran `usp_RunAllocation` (32.9s): 615 items, 88,560 rows, 6,863 blocked, 127,995
+  units shipped. Both deliverables auto-named/saved via last session's automation - first real
+  use of it, worked correctly (`Claude_results/09-26-26-Final_Allocation_Results.csv`,
+  `09-26-26-DC_Qty_Less_than_Case_Qty.csv`).
+- Two rounds of comparison against Wesley's manual output this week, using
+  `scripts/compare-with-manual.js` for the first time in production (previously only tested):
+  first pass 63 discrepancies, second pass (against an updated `Wes_WO_09-26-26.csv`) down to
+  4. Traced all 4 remaining individually rather than assume - every one is the same
+  boundary/case-flooring pattern already confirmed 2026-09-12 (Wesley's qty exactly equals the
+  raw remaining DC supply at the cutoff point, which is less than one case); none were new or
+  unexplained.
