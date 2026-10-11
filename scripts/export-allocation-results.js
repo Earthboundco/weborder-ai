@@ -22,7 +22,7 @@ async function main() {
       ar.ItemCode, ii.DESCRIPTION1 AS ItemDescription, ar.DCS_CODE,
       ar.StoreCode, ar.FinalAllocationQty, ar.DC_Qty, ar.LeftoverQty, ar.DCQtyNotCaseMultiple
     FROM AllocationResults ar
-    LEFT JOIN ItemInformationComplete ii ON ii.ITEM_NO = ar.ITEM_NO
+    LEFT JOIN Item_Information_Complete_for_Replenishment ii ON ii.ITEM_NO = ar.ITEM_NO
     ${includeAll ? '' : 'WHERE ar.FinalAllocationQty > 0'}
     ORDER BY ar.ItemCode, ar.StoreCode
   `;

@@ -518,3 +518,30 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   boundary/case-flooring pattern already confirmed 2026-09-12 (Wesley's qty exactly equals the
   raw remaining DC supply at the cutoff point, which is less than one case); none were new or
   unexplained.
+
+## 2026-10-11
+
+- Weekly refresh (all 8 `assets/` files): 533 items (down from 615). Store 547 newly added to
+  Pattern_Store_Group (139 stores/pattern). Imported and ran `usp_RunAllocation` (~30s).
+- First comparison against Wesley's manual file (`10-11-26-Manual-Allocation_long.csv`): 337
+  discrepancies. Traced the largest (items 81351/81352, 119 rows, we shipped 0): their EBT-derived
+  DPS codes were combined sizes (`.../S/M`, `.../L/XL`) that don't exist in
+  DPS_Code_allocation_table -> base qty 0. Wesley used the /S (or /M) and /L rows.
+- **Decision (Wesley):** stop using the `ItemInformationComplete` view. New 9th weekly input
+  `assets/Item_Information_Complete_for_Replenishment.xlsx` -> table
+  `Item_Information_Complete_for_Replenishment` (sql/017, `scripts/import-item-information.js`);
+  vw_AllocationBase and vw_ExclusionEvaluation repointed. Only the 2 DPS codes differed from the old
+  view; all other attributes matched. Reran: 337 -> 218 discrepancies; 81351/81352 now match exactly.
+  Remaining 218 are mostly items 97717/97756/97793/97788/97720/97785 (same total units, different
+  stores - to be traced) plus scattered single rows.
+- Store 547 (Grand Junction, 1-IttyBitty) now blocked for the same items as store 479 (Brandon) per
+  Wesley: `sql/018` adds 547 beside 479 in Exc4/Exc11/Exc12 (hardcoded by Store Code). Newly blocked
+  81 items at 547 (Exc11/12); units shipped to 547 fell from 3,885 to 2,921. Reran: 533 items, 76,752
+  rows, 5,723 blocked, 59,376 units. Discrepancies vs Wesley's manual file: 337 -> 218 -> **124**, and
+  none involve stores 479/547. The 7 DeadSKU / `26 BTS Fashion` items (97717, 97720, 97756, 97785,
+  97788, 97791, 97793; 118 rows) match a waterfall with NO Initial Shortage Adjustment - open question
+  to Wesley whether that is a rule (and which attribute triggers it).
+- Traced 94592 (store 305), 95816 (422), 97356 (522): all caused by fractional on-hand in the source
+  (3.999, 3.999, -0.001) - we round to nearest unit, Wesley's process appears to floor. **Wesley's
+  decision: keep nearest-unit rounding.** `scripts/compare-with-manual.js` now adds a `Note` column
+  ("fractional on-hand qty" / "fractional in-transit qty") read from the raw `Stores_Qtys_and_MinMax.xlsx`.
