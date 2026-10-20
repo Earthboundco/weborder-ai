@@ -7,7 +7,7 @@
 //
 // Format (column widths, header, cell styles) comes from the template - by default
 // Wesley_tools/PO_Notes_Template.xlsx (Wesley's Sample.xlsx, 2026-10-20); data rows copy the
-// template's row-2 styles, row height 50.
+// template's row-2 styles, row height 50. Opens at 80% zoom with the header row frozen.
 //
 // Sources (all SAP HANA, see docs/data-sources.md):
 //   - PO lines + PO vendor + vendor type: REPORTUSER.ORDERS_DETAILED_SUM_W_CM (PO_VENDCODESAP,
@@ -103,7 +103,16 @@ async function main() {
   const ws = tpl.worksheets[0];
   const styles = [];
   for (let c = 1; c <= 18; c++) styles.push(JSON.parse(JSON.stringify(ws.getRow(2).getCell(c).style || {})));
-  if (ws.rowCount > 1) ws.spliceRows(2, ws.rowCount - 1);
+  // Clear the template's sample rows (spliceRows left them in place when fewer POs than sample
+  // rows were written - found 2026-10-20 with a single-PO run).
+  const templateRows = ws.rowCount;
+  for (let r = 2; r <= templateRows; r++) {
+    const row = ws.getRow(r);
+    for (let c = 1; c <= ws.columnCount; c++) { const cell = row.getCell(c); cell.value = null; cell.style = {}; }
+    row.height = undefined;
+  }
+  // Per Wesley (2026-10-20): open at 80% zoom with the header row frozen.
+  ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 1, topLeftCell: 'A2', activeCell: 'A2', zoomScale: 80, zoomScaleNormal: 80 }];
 
   const warnings = [];
   pos.forEach((po, idx) => {

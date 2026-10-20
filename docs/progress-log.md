@@ -568,3 +568,7 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   isn't unique across numbering series (6,936 POs / 6,920 numbers), so the PO's vendor
   (`PO_VENDCODESAP` = `OPOR."CardCode"`) picks the document; if several still match, their
   distinct Remarks are combined and a warning is printed.
+- Per Wesley: PO Notes files now open at 80% zoom with the header row frozen. Also fixed a bug
+  found while testing: with fewer POs than the template's 3 sample rows, the leftover sample rows
+  stayed in the output (`spliceRows` didn't remove them); the template rows are now cleared
+  explicitly. Files generated so far (3 and 8 POs) were not affected.
