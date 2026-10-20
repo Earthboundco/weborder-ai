@@ -553,3 +553,10 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   pipeline yet), `scripts/hana-query.js` and `scripts/list-hana-objects.js`. Verified reads of
   `REPORTUSER` and `EARTHBOUND` (HANA) plus the sibling's main `EBT` tables. Details in
   `data-sources.md` > Connection.
+- Added `scripts/po-notes.js` for Wesley's PO Notes log: given PO numbers, fills the 18-column
+  entry sheet (one row per PO) from HANA - `ORDERS_DETAILED_SUM_W_CM` (items, PO vendor, I/D type),
+  `SAP_BP_MASTER_DATA` (vendor name), `SAP_Item_Information` (Launch Code, Weborder/Web View ->
+  Items' status). Writes `<Desktop>/<MM-DD-YY>-for-PO-Notes.xlsx`, format taken from Wesley's
+  `Desktop/Sample.xlsx` (`--template` to override), rows 50 high. Product summary is passed per PO
+  with `--product` (fallback: built from item descriptions). One-off test, POs 8325/8322/8340:
+  every column matched Sample.xlsx except the free-text Product wording for 8322 and 8340.
