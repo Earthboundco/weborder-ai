@@ -563,3 +563,8 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
 - Per Wesley: the PO Notes template moved from `Desktop/Sample.xlsx` to
   `Wesley_tools/PO_Notes_Template.xlsx` (gitignored, Wesley's machine only); `scripts/po-notes.js`
   now defaults to it. Retested 8325/8322/8340: all values match the sample.
+- Per Wesley: `scripts/po-notes.js` now fills "Shipment instruction and/or PO Note" with the PO's
+  SAP Remarks = `EARTHBOUND.OPOR."Comments"` (verified on PO 8326 against Wesley's text). `DocNum`
+  isn't unique across numbering series (6,936 POs / 6,920 numbers), so the PO's vendor
+  (`PO_VENDCODESAP` = `OPOR."CardCode"`) picks the document; if several still match, their
+  distinct Remarks are combined and a warning is printed.

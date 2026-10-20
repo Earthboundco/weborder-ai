@@ -14,10 +14,12 @@
 //     PO_VENDTYPE I/D; rows repeat per line/container, so items are de-duplicated)
 //   - Vendor name (and type fallback): REPORTUSER.SAP_BP_MASTER_DATA
 //   - Launch Code, Weborder (Y/N), Web View (Active/Inactive): REPORTUSER.SAP_Item_Information
+//   - PO Remarks (SAP PO screen "Remarks"): EARTHBOUND.OPOR."Comments"
 //
 // Columns filled: PO#, Vendor Name, Product (<=40 chars), Item #s (one per line), Number of items,
-// Launch Code (unique, one per line), PO source (Domestic/International), LCO done? = "No",
-// Items' status. Every other column is left blank, per Wesley.
+// Launch Code (unique, one per line), Shipment instruction and/or PO Note (= PO Remarks, per
+// Wesley 2026-10-20), PO source (Domestic/International), LCO done? = "No", Items' status. Every
+// other column is left blank, per Wesley.
 //
 // Product: pass --product for each PO (a human summary reads best). Without it, a fallback is
 // built from the most common item-description words (before the first '-').
@@ -90,6 +92,12 @@ async function main() {
     LEFT JOIN "REPORTUSER"."SAP_Item_Information" i ON i."ITEMNUMBER" = o."PO_ITEMCODE"
     WHERE o."PO_NO" IN (${pos.map(() => '?').join(', ')})`, pos);
 
+  // PO Remarks (SAP PO screen "Remarks" = OPOR."Comments"). DocNum isn't unique across numbering
+  // series (16 of 6,936 POs on 2026-10-20), so the PO's vendor picks the right document.
+  const remarkRows = await hanaQuery(`
+    SELECT "DocNum", "CardCode", "Comments" FROM "EARTHBOUND"."OPOR"
+    WHERE "DocNum" IN (${pos.map(() => '?').join(', ')})`, pos);
+
   const tpl = new ExcelJS.Workbook();
   await tpl.xlsx.readFile(template);
   const ws = tpl.worksheets[0];
@@ -115,6 +123,11 @@ async function main() {
     let product = products.get(po) ?? (items.length ? fallbackProduct(items) : null);
     if (product && product.length > PRODUCT_MAX) { warnings.push(`PO ${po}: Product cut to ${PRODUCT_MAX} characters`); product = product.slice(0, PRODUCT_MAX); }
     const itemNos = items.map(i => String(i.PO_ITEMCODE));
+    const vendCodes = new Set(lines.map(l => l.PO_VENDCODESAP).filter(Boolean));
+    let docs = remarkRows.filter(d => Number(d.DocNum) === po);
+    if (docs.length > 1 && vendCodes.size) docs = docs.filter(d => vendCodes.has(d.CardCode));
+    if (docs.length > 1) warnings.push(`PO ${po}: ${docs.length} SAP POs share this number - Remarks from all of them`);
+    const remarks = [...new Set(docs.map(d => String(d.Comments || '').trim()).filter(Boolean))].join('\n');
 
     const values = new Array(18).fill(null);
     values[0] = po;                                                        // PO#
@@ -123,6 +136,7 @@ async function main() {
     values[5] = itemNos.length === 1 && /^\d+$/.test(itemNos[0]) ? Number(itemNos[0]) : (itemNos.join('\n') || null); // Item #s
     values[6] = items.length || null;                                      // Number of items
     values[7] = launch.join('\n') || null;                                 // Launch Code
+    values[10] = remarks || null;                                          // Shipment instruction and/or PO Note
     values[13] = source;                                                   // PO source (Int'l/Dom)
     values[14] = 'No';                                                     // LCO done?
     values[17] = items.length ? itemsStatus(items) : null;                 // Items' status
