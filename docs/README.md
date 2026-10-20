@@ -16,6 +16,7 @@ without re-deriving everything from scratch. Read these in order:
 ## Quick facts
 - Our schema/database to build in: `EBTAI` (empty when we started - now holds the tables/views
   described in `data-sources.md`).
-- Read access to `EBT` (the real operational DB - 813 tables/views) and `EBTGOOGLE`. No access to
-  SAP directly - everything needed is (or will be) replicated into SQL Server.
+- Read access to `EBT` (the real operational DB - 813 tables/views) and `EBTGOOGLE`. Since
+  2026-10-20 also read access to SAP HANA (`REPORTUSER`, `EARTHBOUND`) via `hana.js` - same
+  sources as `../Sales_Inventory_analysis`; see `data-sources.md` > Connection.
 - Primary contact for business rules: Wesley (does this process manually today, every Sunday).

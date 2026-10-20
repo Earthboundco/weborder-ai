@@ -9,6 +9,36 @@ SQL Server 2008 R2 - **no `TRY_CAST`, no modern T-SQL functions**. `requestTimeo
 We have `db_datareader`-level access (at least) to `EBT`, `EBTGOOGLE`, and full control of
 `EBTAI`. No access to `EBTIMP`, `EBTLEASE`, `EBTPASS`, `PIMS`, or the helpspot databases.
 
+### SAP HANA + the sales/inventory project's sources (added 2026-10-20, per Wesley)
+
+Wesley asked for this project to have the same data access as `../Sales_Inventory_analysis`.
+SQL Server was already identical (same server, database and login in both `.env` files), so
+everything it reads in `EBT` is readable here too. What was missing was **SAP HANA**:
+
+- `.env` now also holds `HANA_HOST`, `HANA_PORT`, `HANA_DATABASE`, `HANA_USERNAME`,
+  `HANA_PASSWORD`, `HANA_SCHEMA` (copied from the sibling project's `.env`; default schema
+  `REPORTUSER`). Driver: `hdb` (npm).
+- `hana.js` - `getHana()`, `hanaQuery(sql, params)`, `closeHana()` (copied from the sibling).
+- `item-info.js` - `loadItemInfo()`: live SAP item master (`REPORTUSER.SAP_Item_Information`) in
+  the old manual-export column names/format. Available here but **not wired into the pipeline**;
+  weborder-ai still reads item info from `assets/Item_Information_Complete_for_Replenishment`.
+- `scripts/hana-query.js <file.sql> [--csv out.csv]` - HANA counterpart of `scripts/query.js`.
+- `scripts/list-hana-objects.js [SCHEMA]` - lists a schema's tables/views/columns to
+  `Claude_results/`.
+
+Verified 2026-10-20 from this repo: `REPORTUSER` (e.g. `SAP_BP_MASTER_DATA`) and `EARTHBOUND`
+(e.g. `OITW`) both readable; `EBT` `salesfact`, `INVN_SBS_QTY_V`, `[Store Directory]`,
+`Monthly_inv`, `INVOICE` all readable.
+
+**The full catalogue with gotchas lives in `../Sales_Inventory_analysis/docs/data-sources.md`** -
+read it before using any of these (not duplicated here). Main objects: `EBT.dbo.salesfact`
+(sales), `INVN_SBS_QTY_V` (live store on-hand/min/max), `[Store Directory]`, `Monthly_inv`
+(monthly on-hand history), `INVOICE`/`INV_ITEM` (POS receipts); HANA `REPORTUSER.SAP_Item_Information`
+(live item master), `ORDERS_DETAILED_SUM_W_CM` (POs - rows repeat, don't sum blindly),
+`SAP_BP_MASTER_DATA` (vendors), `DCSCODE_INFO`; `EARTHBOUND.OITW` (live DC on-hand, `WhsCode='HDQ'`),
+`OINM` (inventory ledger, history from 2022-02-10), `ORDR`/`RDR1`/`ODLN`/`DLN1` (sales orders and
+deliveries). HANA mixed-case column names must be double-quoted exactly (`"OnHand"`, `"WhsCode"`).
+
 ## Objects we own, in `EBTAI`
 
 All DDL lives in `sql/`, applied in numeric order via `node scripts/run-sql.js sql/00X_*.sql`.

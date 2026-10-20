@@ -545,3 +545,11 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   (3.999, 3.999, -0.001) - we round to nearest unit, Wesley's process appears to floor. **Wesley's
   decision: keep nearest-unit rounding.** `scripts/compare-with-manual.js` now adds a `Note` column
   ("fractional on-hand qty" / "fractional in-transit qty") read from the raw `Stores_Qtys_and_MinMax.xlsx`.
+
+## 2026-10-20
+- Per Wesley: gave this project the same data access as `../Sales_Inventory_analysis`. SQL Server
+  was already the same login, so only SAP HANA was new: added the `HANA_*` settings to `.env`,
+  the `hdb` driver, `hana.js`, `item-info.js` (live SAP item master - available, not used by the
+  pipeline yet), `scripts/hana-query.js` and `scripts/list-hana-objects.js`. Verified reads of
+  `REPORTUSER` and `EARTHBOUND` (HANA) plus the sibling's main `EBT` tables. Details in
+  `data-sources.md` > Connection.

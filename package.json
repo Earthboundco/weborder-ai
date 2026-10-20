@@ -13,6 +13,7 @@
   "dependencies": {
     "dotenv": "^17.4.2",
     "exceljs": "^4.4.0",
+    "hdb": "^2.30.1",
     "mssql": "^12.7.0"
   }
 }
