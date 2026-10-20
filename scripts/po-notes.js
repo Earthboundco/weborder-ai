@@ -5,8 +5,9 @@
 //   e.g. node scripts/po-notes.js 8325 8322 8340 --product 8325="Fragrance oils"
 // Writes <Desktop>/<MM-DD-YY>-for-PO-Notes.xlsx (today's date) unless --out is given.
 //
-// Format (column widths, header, cell styles) comes from the template - by default Wesley's
-// <Desktop>/Sample.xlsx (2026-10-20); data rows copy the template's row-2 styles, row height 50.
+// Format (column widths, header, cell styles) comes from the template - by default
+// Wesley_tools/PO_Notes_Template.xlsx (Wesley's Sample.xlsx, 2026-10-20); data rows copy the
+// template's row-2 styles, row height 50.
 //
 // Sources (all SAP HANA, see docs/data-sources.md):
 //   - PO lines + PO vendor + vendor type: REPORTUSER.ORDERS_DETAILED_SUM_W_CM (PO_VENDCODESAP,
@@ -27,7 +28,8 @@ const ExcelJS = require('exceljs');
 const { hanaQuery, closeHana } = require('../hana');
 
 const DESKTOP = path.join(os.homedir(), 'OneDrive - Earthbound Trading Company', 'Desktop');
-const DEFAULT_TEMPLATE = path.join(DESKTOP, 'Sample.xlsx');
+// Wesley_tools/ is gitignored (personal files), so the template exists only on Wesley's machine.
+const DEFAULT_TEMPLATE = path.join(__dirname, '..', 'Wesley_tools', 'PO_Notes_Template.xlsx');
 const PRODUCT_MAX = 40;
 
 function parseArgs(argv) {

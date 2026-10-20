@@ -560,3 +560,6 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   `Desktop/Sample.xlsx` (`--template` to override), rows 50 high. Product summary is passed per PO
   with `--product` (fallback: built from item descriptions). One-off test, POs 8325/8322/8340:
   every column matched Sample.xlsx except the free-text Product wording for 8322 and 8340.
+- Per Wesley: the PO Notes template moved from `Desktop/Sample.xlsx` to
+  `Wesley_tools/PO_Notes_Template.xlsx` (gitignored, Wesley's machine only); `scripts/po-notes.js`
+  now defaults to it. Retested 8325/8322/8340: all values match the sample.
