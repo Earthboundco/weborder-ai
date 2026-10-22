@@ -15,11 +15,14 @@
 //   - Vendor name (and type fallback): REPORTUSER.SAP_BP_MASTER_DATA
 //   - Launch Code, Weborder (Y/N), Web View (Active/Inactive): REPORTUSER.SAP_Item_Information
 //   - PO Remarks (SAP PO screen "Remarks"): EARTHBOUND.OPOR."Comments"
+//   - HDQ received status: EARTHBOUND.POR1 "Quantity" vs "OpenQty" (SAP's own open qty, net of
+//     returns - summing goods receipts double-counts a returned/re-entered GRPO, e.g. PO 8374)
 //
 // Columns filled: PO#, Vendor Name, Product (<=40 chars), Item #s (one per line), Number of items,
 // Launch Code (unique, one per line), Shipment instruction and/or PO Note (= PO Remarks, per
-// Wesley 2026-10-20), PO source (Domestic/International), LCO done? = "No", Items' status. Every
-// other column is left blank, per Wesley.
+// Wesley 2026-10-20), HDQ received status (per Wesley 2026-10-22: "SAP rcvd" / "SAP part rcvd as
+// MM/DD/YY" / "SAP not rcvd as MM/DD/YY", dated the run day), PO source (Domestic/International),
+// LCO done? = "No", Items' status. Every other column is left blank, per Wesley.
 //
 // Product: pass --product for each PO (a human summary reads best). Without it, a fallback is
 // built from the most common item-description words (before the first '-').
@@ -97,6 +100,14 @@ async function main() {
   const remarkRows = await hanaQuery(`
     SELECT "DocNum", "CardCode", "Comments" FROM "EARTHBOUND"."OPOR"
     WHERE "DocNum" IN (${pos.map(() => '?').join(', ')})`, pos);
+  const poLines = await hanaQuery(`
+    SELECT p."DocNum", p."CardCode", l."Quantity", l."OpenQty"
+    FROM "EARTHBOUND"."OPOR" p JOIN "EARTHBOUND"."POR1" l ON l."DocEntry" = p."DocEntry"
+    WHERE p."DocNum" IN (${pos.map(() => '?').join(', ')})`, pos);
+
+  const now = new Date();
+  const mm = String(now.getMonth() + 1).padStart(2, '0'), dd = String(now.getDate()).padStart(2, '0'), yy = String(now.getFullYear()).slice(-2);
+  const asOf = `${mm}/${dd}/${yy}`;
 
   const tpl = new ExcelJS.Workbook();
   await tpl.xlsx.readFile(template);
@@ -137,6 +148,14 @@ async function main() {
     if (docs.length > 1 && vendCodes.size) docs = docs.filter(d => vendCodes.has(d.CardCode));
     if (docs.length > 1) warnings.push(`PO ${po}: ${docs.length} SAP POs share this number - Remarks from all of them`);
     const remarks = [...new Set(docs.map(d => String(d.Comments || '').trim()).filter(Boolean))].join('\n');
+    let qtyLines = poLines.filter(l => Number(l.DocNum) === po);
+    if (vendCodes.size) qtyLines = qtyLines.filter(l => vendCodes.has(l.CardCode));
+    let rcvdStatus = null;
+    if (qtyLines.length) {
+      const ordered = qtyLines.reduce((s, l) => s + Number(l.Quantity), 0);
+      const open = qtyLines.reduce((s, l) => s + Number(l.OpenQty), 0);
+      rcvdStatus = ordered - open <= 0 ? `SAP not rcvd as ${asOf}` : open <= 0 ? 'SAP rcvd' : `SAP part rcvd as ${asOf}`;
+    } else if (lines.length) warnings.push(`PO ${po}: no POR1 lines found - HDQ received status left blank`);
 
     const values = new Array(18).fill(null);
     values[0] = po;                                                        // PO#
@@ -146,6 +165,7 @@ async function main() {
     values[6] = items.length || null;                                      // Number of items
     values[7] = launch.join('\n') || null;                                 // Launch Code
     values[10] = remarks || null;                                          // Shipment instruction and/or PO Note
+    values[12] = rcvdStatus;                                               // HDQ received status
     values[13] = source;                                                   // PO source (Int'l/Dom)
     values[14] = 'No';                                                     // LCO done?
     values[17] = items.length ? itemsStatus(items) : null;                 // Items' status
@@ -158,11 +178,10 @@ async function main() {
       cell.value = values[c - 1];
     }
     row.commit();
-    console.log(`PO ${po}: ${vendors[0] || '?'} | ${items.length} item(s) | ${source || '?'} | ${values[17] || '?'} | "${product || ''}"`);
+    console.log(`PO ${po}: ${vendors[0] || '?'} | ${items.length} item(s) | ${source || '?'} | ${values[17] || '?'} | ${rcvdStatus || '?'} | "${product || ''}"`);
   });
 
-  const now = new Date();
-  const stamp = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}-${String(now.getFullYear()).slice(-2)}`;
+  const stamp = `${mm}-${dd}-${yy}`;
   const file = out ? path.resolve(out) : path.join(DESKTOP, `${stamp}-for-PO-Notes.xlsx`);
   await tpl.xlsx.writeFile(file);
   for (const w of warnings) console.warn(`WARNING: ${w}`);

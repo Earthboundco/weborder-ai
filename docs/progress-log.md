@@ -572,3 +572,11 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   found while testing: with fewer POs than the template's 3 sample rows, the leftover sample rows
   stayed in the output (`spliceRows` didn't remove them); the template rows are now cleared
   explicitly. Files generated so far (3 and 8 POs) were not affected.
+
+## 2026-10-22
+- Per Wesley: `scripts/po-notes.js` now fills "HDQ received status" - `SAP rcvd` (nothing left
+  open), `SAP part rcvd as MM/DD/YY` or `SAP not rcvd as MM/DD/YY` (run date). Based on
+  `EARTHBOUND.POR1` `"Quantity"` vs `"OpenQty"`, not on summing goods receipts: PO 8374's GRPO
+  7443 (3,440) was fully returned the same day (Goods Return 144, `ORPD`/`RPD1`) and re-entered as
+  GRPO 7446, so the receipts sum to 6,480 while 3,040 were really received. Tested: 9023 rcvd,
+  8374 part, 8930 not rcvd.
