@@ -580,3 +580,17 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   7443 (3,440) was fully returned the same day (Goods Return 144, `ORPD`/`RPD1`) and re-entered as
   GRPO 7446, so the receipts sum to 6,480 while 3,040 were really received. Tested: 9023 rcvd,
   8374 part, 8930 not rcvd.
+
+## 2026-10-23
+- Added `scripts/ship-out-list.js` for Wesley's ShipOutList: reads `Desktop/Source.xlsx` (weekly
+  PO list - Seq, PO#, Vendor Name, "Item #s" one per line) and writes one row per item, grouped by
+  PO with an empty row between POs and a `PO# <PO> <vendor, 20 chars>` label in col AA on each PO's
+  last row. Output `<Desktop>/<MM-DD-YY>-ShipOutList.xlsx`; format and conditional formatting from
+  Wesley's example, kept as `Wesley_tools/ShipOutList_Template.xlsx` (gitignored).
+  Sources: `SAP_Item_Information` (Price = Sale Price `CurrentPrice` and Stores Blocked counts 470,
+  both per Wesley; Cost = `ItemCost`), `OITW` HDQ raw `OnHand` (DC OH Qty - not net of committed,
+  matching the example), `POR1` (Order Qty = `Quantity`, Rcvd = `Quantity - OpenQty`, summed over
+  split lines, e.g. PO 8294), `INVN_SBS_QTY_V` for store on-hand/blocked (all stores but the DC) with
+  store 470's on-hand from `OITW` warehouse 470. Tested against Wesley's example (40 POs, 184
+  items, 225 rows): every cell matched except 6 store on-hand values off by 1-2 units (live sales
+  since the example was made) and 31 "Stores Blocked" = 1, all from store 470's Min 999 block.
