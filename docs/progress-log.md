@@ -594,3 +594,7 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   store 470's on-hand from `OITW` warehouse 470. Tested against Wesley's example (40 POs, 184
   items, 225 rows): every cell matched except 6 store on-hand values off by 1-2 units (live sales
   since the example was made) and 31 "Stores Blocked" = 1, all from store 470's Min 999 block.
+
+## 2026-10-23
+- `scripts/po-notes.js`: SAP stores line breaks in PO Remarks as a bare `\r` (113 POs), which
+  Excel doesn't break on (PO 9037's store list ran together, e.g. "new513"); now converted to `\n`.

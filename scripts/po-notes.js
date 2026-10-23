@@ -147,7 +147,8 @@ async function main() {
     let docs = remarkRows.filter(d => Number(d.DocNum) === po);
     if (docs.length > 1 && vendCodes.size) docs = docs.filter(d => vendCodes.has(d.CardCode));
     if (docs.length > 1) warnings.push(`PO ${po}: ${docs.length} SAP POs share this number - Remarks from all of them`);
-    const remarks = [...new Set(docs.map(d => String(d.Comments || '').trim()).filter(Boolean))].join('\n');
+    // SAP stores Remarks line breaks as a bare \r (113 POs on 2026-10-23), which Excel doesn't break on.
+    const remarks = [...new Set(docs.map(d => String(d.Comments || '').replace(/\r\n?/g, '\n').trim()).filter(Boolean))].join('\n');
     let qtyLines = poLines.filter(l => Number(l.DocNum) === po);
     if (vendCodes.size) qtyLines = qtyLines.filter(l => vendCodes.has(l.CardCode));
     let rcvdStatus = null;
