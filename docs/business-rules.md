@@ -346,3 +346,7 @@ sources of the inputs).
   8366) or `"U_V33_OrigETA"` (original ETA, not updated when a PO slips).
 - **Overdue lines** (open, `ShipDate` before the current week - 98 lines on 2026-10-25) count as
   arriving in the current week, i.e. the first row of the table (per Wesley, 2026-10-25).
+- **Week 54** (per Wesley, 2026-10-25): with Sunday-start weeks, a leap year starting on a
+  Saturday has a one-day week 54 (Dec 31 - next is 2028). Ignore it: the table goes 53 -> 01 and
+  the week-% file has no `-54` row. A PO line whose `ShipDate` falls in
+  week 54 counts in week 53 of the same year, so its qty isn't dropped (confirmed by Wesley).
