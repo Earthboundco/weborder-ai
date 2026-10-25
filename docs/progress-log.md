@@ -598,3 +598,13 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
 ## 2026-10-23
 - `scripts/po-notes.js`: SAP stores line breaks in PO Remarks as a bare `\r` (113 POs), which
   Excel doesn't break on (PO 9037's store list ran together, e.g. "new513"); now converted to `\n`.
+
+## 2026-10-25
+- Reviewed Natalie's ETA/LTD workbook (`10-25-26_Natalie_ETA_LTD.xlsm`, sheet `Qtys`) with Wesley:
+  traced how "Period ETA YRWK" and "Period LTD YRWK" are calculated, ahead of formula changes
+  Wesley will specify. Found live SAP sources for its four per-item inputs, keyed on item number,
+  all matching the file for 151/151 items: Vendor lead time = `EARTHBOUND.OCRD."U_V33_BP_LEADTIME"`
+  of the item's vendor (`OITM."CardCode"`); Product source = `SAP_Item_Information."VendorSource"`
+  (`D`/`I` = the file's `Dom`/`Int'l`; also `OITM."U_V33_Origin"` USA/INTL); IStatus =
+  `SAP_Item_Information."ISTATUS"`; DCS = `SAP_Item_Information."DCS_CODE"`. Gap: only 132 of
+  3,734 active vendors have a lead time filled in, so items from other vendors will come back blank.

@@ -35,7 +35,7 @@ read it before using any of these (not duplicated here). Main objects: `EBT.dbo.
 (sales), `INVN_SBS_QTY_V` (live store on-hand/min/max), `[Store Directory]`, `Monthly_inv`
 (monthly on-hand history), `INVOICE`/`INV_ITEM` (POS receipts); HANA `REPORTUSER.SAP_Item_Information`
 (live item master), `ORDERS_DETAILED_SUM_W_CM` (POs - rows repeat, don't sum blindly),
-`SAP_BP_MASTER_DATA` (vendors), `DCSCODE_INFO`; `EARTHBOUND.OITW` (live DC on-hand, `WhsCode='HDQ'`),
+`SAP_BP_MASTER_DATA` (vendors), `DCSCODE_INFO`; `EARTHBOUND.OCRD."U_V33_BP_LEADTIME"` (vendor lead time in days, filled for only ~132 vendors - 2026-10-25); `EARTHBOUND.OITW` (live DC on-hand, `WhsCode='HDQ'`),
 `OINM` (inventory ledger, history from 2022-02-10), `ORDR`/`RDR1`/`ODLN`/`DLN1` (sales orders and
 deliveries). HANA mixed-case column names must be double-quoted exactly (`"OnHand"`, `"WhsCode"`).
 
