@@ -624,4 +624,4 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   "Advance 3rd PO# 8905" (as worked by hand); 86285's 40 projection weeks match
   `CalculatingQtysNeeded.xlsx`; ETA/LTD YRWK, weeks and LTD flag match Natalie's workbook for all 151
   items (the 7 FallWinter "Do not order" items are now blank, per the new rule). Qty needed is
-  rounded up to a whole unit - placeholder, see `open-questions.md`.
+  rounded up to a whole unit (confirmed by Wesley the same day, no case-pack rounding).

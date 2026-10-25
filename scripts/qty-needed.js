@@ -185,7 +185,7 @@ function project(it, t, NOW, weekPct) {
   if (weeks.some(x => x.week < ETA && x.end < it.extMdq)) flags.push('Company qty drops below Ext MDQ before next PO arrives');
   if (etaRow && etaRow.end < it.extMdq) for (const p of pos.filter(x => x.week > ETA)) flags.push(`Advance ${ordinal(p.rank)} PO# ${p.po}`);
   return { weeks, pos, ETA, LTD, stockAtEta, sales, arriving, flags,
-    // Rounded up to a whole unit (placeholder - see docs/open-questions.md).
+    // Rounded up to a whole unit, no case-pack rounding (confirmed by Wesley, 2026-10-25).
     qtyNeeded: etaRow ? Math.max(0, Math.ceil(sales + it.extMdq - stockAtEta - arriving - 1e-9)) : null };
 }
 
