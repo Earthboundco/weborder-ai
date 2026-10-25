@@ -608,3 +608,11 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   (`D`/`I` = the file's `Dom`/`Int'l`; also `OITM."U_V33_Origin"` USA/INTL); IStatus =
   `SAP_Item_Information."ISTATUS"`; DCS = `SAP_Item_Information."DCS_CODE"`. Gap: only 132 of
   3,734 active vendors have a lead time filled in, so items from other vendors will come back blank.
+- Reviewed Wesley's `CalculatingQtysNeeded.xlsx` (item 86285): a weekly company-stock projection
+  from today's YearWeek - start qty minus (1% average x product-group week % x 100) sold, floored
+  at 0, plus PO arrivals at week end. Product group and week % come from
+  `../1pct-average-calc/assets/Product_Groups.xlsx` / `Product_Group_Week_Percentage.xlsx`
+  (`_Sales` column; all 318 rows matched). Arrival weeks 202706/202709/202715 = open POs 8716,
+  8895, 8717 (`OpenQty` 708/881/708); `POR1."ShipDate"` (line delivery date), `OPOR."DocDueDate"`
+  and `OPOR."U_V33_OrigETA"` all give those weeks for this item. Across all 2,627 open PO lines,
+  ShipDate = DocDueDate on 2,167 and = OrigETA on 1,851; 98 open lines have a ShipDate already past.

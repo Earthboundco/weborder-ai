@@ -333,3 +333,16 @@ sources of the inputs).
   **And** only for items in Department (`SAP_Item_Information."DEPTCODE"`) `Accessory`,
   `Aroma and Spa`, `Clothing`, `HomeDecor`, `Impulse`, `Jewelry` (per Wesley, 2026-10-25) - this
   leaves out Not Retail supplies, which had 619 of the 624 missing lead times.
+
+## Weekly qty projection (Wesley's `CalculatingQtysNeeded.xlsx` - rules gathered 2026-10-25, not built yet)
+
+- Weekly table from today's YearWeek: start qty = company qty (today), then previous week's end
+  qty; sold = item 1% average x product-group week % (`_Sales` column) x 100; end qty =
+  max(start - sold, 0) + arrivals. Product group / week % from
+  `../1pct-average-calc/assets/Product_Groups.xlsx` and `Product_Group_Week_Percentage.xlsx`.
+- **Arrivals** (per Wesley, 2026-10-25): open PO lines (`EARTHBOUND.POR1`, `LineStatus='O'`,
+  PO not cancelled), qty = the line's `"OpenQty"`, week = the line's delivery date `"ShipDate"` -
+  not the header `OPOR."DocDueDate"` (one date per PO, wrong for split shipments, e.g. Peruhand PO
+  8366) or `"U_V33_OrigETA"` (original ETA, not updated when a PO slips).
+- **Overdue lines** (open, `ShipDate` before the current week - 98 lines on 2026-10-25) count as
+  arriving in the current week, i.e. the first row of the table (per Wesley, 2026-10-25).
