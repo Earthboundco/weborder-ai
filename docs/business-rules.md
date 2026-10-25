@@ -304,64 +304,7 @@ Wesley runs the process day to day is still CLI scripts, unchanged):
 Both scripts take an optional output path argument (default to the file names above in the
 current directory) and are gitignored as generated output, not source data.
 
-## ETA / LTD (Natalie's workbook - rules gathered 2026-10-25, built in `scripts/qty-needed.js`)
+## Qty Needed / ETA-LTD - moved to 1pct-average-calc
 
-Source workbook: `10-25-26_Natalie_ETA_LTD.xlsm`, sheet `Qtys`. It estimates when an item would
-reach the DC if ordered today (Period ETA YRWK) and the date the reorder qty must cover to
-(Period LTD YRWK, "Last 'Til Date"). Wesley will specify changes to the workbook's formulas; the
-rules below are his clarifications so far (see `progress-log.md` 2026-10-25 for the live SAP
-sources of the inputs).
-
-- **Product source:** `Dom` / `Int'l`, and the full words `Domestic` / `International` are also
-  valid. Production start (deposit date) = today + 14 days for Domestic, + 28 for International.
-  Live source: `SAP_Item_Information."VendorSource"` (`D`/`I`, = the vendor's `OCRD."U_V33_VendType"`),
-  not the item's `OITM."U_V33_Origin"` (per Wesley, 2026-10-25 - the two disagree only for 282 Not
-  Retail supply items, where Origin says USA but the vendor and country of origin are foreign).
-- **Clothing** = DCS starts with `CL`, or Department = `Clothing` (either test is valid).
-- **Initial ETA** = production start + vendor lead time (days).
-- **Seasonal required weeks:** SpringSummer ETA week 05 (Clothing) / 10 (others), LTD week 30;
-  FallWinter ETA week 36, LTD week 53. `StapleSS` follows the SpringSummer rules and `StapleFW`
-  the FallWinter rules (per Wesley, 2026-10-25).
-- **Period coverage:** 16 weeks for `Staple`, 12 weeks for every other status. Seasonal items
-  (SpringSummer, FallWinter, StapleSS, StapleFW) whose signal is "Order" keep the season-end LTD
-  instead; the 12/16-week coverage applies to non-seasonal items only (per Wesley, 2026-10-25).
-  Seasonal items whose signal is "Do not order" get a **blank** Period ETA and LTD (no 12-week
-  fallback - the workbook currently fills them with initial ETA + 12 weeks).
-- **Lead time is required** only for IStatus `Staple`, `Reorder`, `SpringSummer`, `FallWinter`,
-  `Online`, `SelectedStores`, `FashionFocusStore`, `StapleSS`, `StapleFW`. If any of those items
-  has no lead time, report them to Wesley **before** calculating ETA/LTD - don't default it.
-  **And** only for items in Department (`SAP_Item_Information."DEPTCODE"`) `Accessory`,
-  `Aroma and Spa`, `Clothing`, `HomeDecor`, `Impulse`, `Jewelry` (per Wesley, 2026-10-25) - this
-  leaves out Not Retail supplies, which had 619 of the 624 missing lead times.
-
-## Weekly qty projection (Wesley's `CalculatingQtysNeeded.xlsx` - rules gathered 2026-10-25, built in `scripts/qty-needed.js`)
-
-- Weekly table from today's YearWeek: start qty = company qty (today), then previous week's end
-  qty; sold = item 1% average x product-group week % (`_Sales` column) x 100; end qty =
-  max(start - sold, 0) + arrivals. Product group / week % from
-  `../1pct-average-calc/assets/Product_Groups.xlsx` and `Product_Group_Week_Percentage.xlsx`.
-- **Arrivals** (per Wesley, 2026-10-25): open PO lines (`EARTHBOUND.POR1`, `LineStatus='O'`,
-  PO not cancelled), qty = the line's `"OpenQty"`, week = the line's delivery date `"ShipDate"` -
-  not the header `OPOR."DocDueDate"` (one date per PO, wrong for split shipments, e.g. Peruhand PO
-  8366) or `"U_V33_OrigETA"` (original ETA, not updated when a PO slips).
-- **Overdue lines** (open, `ShipDate` before the current week - 98 lines on 2026-10-25) count as
-  arriving in the current week, i.e. the first row of the table (per Wesley, 2026-10-25).
-- **Week 54** (per Wesley, 2026-10-25): with Sunday-start weeks, a leap year starting on a
-  Saturday has a one-day week 54 (Dec 31 - next is 2028). Ignore it: the table goes 53 -> 01 and
-  the week-% file has no `-54` row. A PO line whose `ShipDate` falls in
-  week 54 counts in week 53 of the same year, so its qty isn't dropped (confirmed by Wesley).
-- **Qty needed (reorder qty)** (per Wesley, 2026-10-25): max(0, sales from ETA week through LTD
-  week + extended MDQ - projected stock at the start of the ETA week - open-PO arrivals in the
-  ETA..LTD weeks). Extended MDQ = item MDQ x count of open stores (the minimum stock to keep). PO
-  arrivals landing between ETA and LTD count in full, even if stock dips below MDQ before they land.
-  Worked examples (2026-10-25): 86285 (1% avg 38, company qty 1,056, 140 stores) = 0;
-  66614 (1% avg 60, company qty 399, 140 stores) = 2,376 + 280 - 138 - 816 = **1,702**.
-- **Flag** "Company qty drops below Ext MDQ before next PO arrives" when the projected end-of-week
-  stock falls below extended MDQ in any week before the ETA week (the reorder can't fix those
-  weeks). 86285: 202702-202705; 66614: 202702-202705 and 202711-202713.
-- **Flag "Advance <nth> PO# <PO>"** (per Wesley, 2026-10-25): when the ETA week's end qty is below
-  extended MDQ, one flag for **every** open PO line landing after the ETA week (not just the first,
-  and including lines after the LTD week);
-  <nth> = its rank among all the item's open PO lines ordered by line ETA (`ShipDate`, ties
-  by PO#), overdue lines included. 66614: ETA-week end qty 12 < 280, open POs 8497, 8904, 8905 ->
-  "Advance 3rd PO# 8905". 86285: ETA-week end qty 1,620 -> no flag.
+The ETA/LTD, weekly qty projection and Qty Needed rules (and `scripts/qty-needed.js`) now live in
+`../1pct-average-calc` (moved there 2026-10-25, per Wesley): see its `docs/business-rules.md`, "Qty Needed".

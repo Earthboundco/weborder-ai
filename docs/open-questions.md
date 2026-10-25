@@ -92,13 +92,5 @@ Things we don't have answers for yet. Don't guess at these - ask Netto/Wesley.
 - **`ItemReplenishment` import cadence/ownership.** Confirmed: Wesley will keep manually
   building the SAP-filtered item list for now; we just import it (`scripts/import-item-
   replenishment.js`). Automating *that* filtering step is explicitly a "later" item, not now.
-- **ETA/LTD rules (2026-10-25, asked Wesley):** (1) ~~how `StapleSS` / `StapleFW` behave~~ **resolved:
-  StapleSS = SpringSummer rules, StapleFW = FallWinter rules** (no item
-  in SAP has them yet). (2) ~~does
-  the 12-week coverage replace the season-end LTD for seasonal "Order" items?~~ **resolved: no, they
-  keep the season-end LTD.** (3) ~~
-  Product source: `SAP_Item_Information."VendorSource"` and `OITM."U_V33_Origin"` disagree for 282
-  items in the lead-time statuses (VendorSource `I`, Origin `USA`) - which one is right?~~
-  **resolved: use VendorSource.**
-- **Qty Needed rounding (2026-10-25) - resolved, confirmed by Wesley:** `scripts/qty-needed.js` rounds the reorder
-  qty **up** to a whole unit, with no case-pack rounding.
+- **Qty Needed / ETA-LTD questions (2026-10-25)** - all resolved; moved with the work to
+  `../1pct-average-calc` (moved there 2026-10-25, per Wesley).

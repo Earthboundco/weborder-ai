@@ -35,7 +35,7 @@ read it before using any of these (not duplicated here). Main objects: `EBT.dbo.
 (sales), `INVN_SBS_QTY_V` (live store on-hand/min/max), `[Store Directory]`, `Monthly_inv`
 (monthly on-hand history), `INVOICE`/`INV_ITEM` (POS receipts); HANA `REPORTUSER.SAP_Item_Information`
 (live item master), `ORDERS_DETAILED_SUM_W_CM` (POs - rows repeat, don't sum blindly),
-`SAP_BP_MASTER_DATA` (vendors), `DCSCODE_INFO`; `EARTHBOUND.OCRD."U_V33_BP_LEADTIME"` (vendor lead time in days, filled for only ~132 vendors - 2026-10-25); `EARTHBOUND.OITW` (live DC on-hand, `WhsCode='HDQ'`),
+`SAP_BP_MASTER_DATA` (vendors), `DCSCODE_INFO`; `EARTHBOUND.OITW` (live DC on-hand, `WhsCode='HDQ'`),
 `OINM` (inventory ledger, history from 2022-02-10), `ORDR`/`RDR1`/`ODLN`/`DLN1` (sales orders and
 deliveries). HANA mixed-case column names must be double-quoted exactly (`"OnHand"`, `"WhsCode"`).
 
@@ -115,7 +115,6 @@ convention (2026-09-19): `<MM-DD-YY>-<Name>.csv`, using today's date.
 | `scripts/export-final-allocation-results.js [file.csv]` | `Claude_results/<date>-Final_Allocation_Results.csv` | Long format, nonzero shipments only: `StoreCode`, `ItemCode`, `Qty` (= `FinalAllocationQty`). |
 | `scripts/export-dc-qty-less-than-case-qty.js [file.csv]` | `Claude_results/<date>-DC_Qty_Less_than_Case_Qty.csv` | Long format, one row per item where `0 < LeftoverQty < QTY_PER_CASE` only (a genuine stuck fragment - `LeftoverQty = 0` not flagged): `ItemCode`, `DCLeftOverQty` (= `LeftoverQty`), `DCQtyLessThanCaseQty` (always `'Y'` for listed rows). Replaces the earlier, broader `DC_ItemsCheck_NotCaseMultiple.csv` (2026-09-06). |
 | `scripts/compare-with-manual.js <claude.csv> <wesley.csv> [out.csv]` | `Claude_results/<date>-Discrepancies_Check.csv` | Compares a Final_Allocation_Results-shaped file against Wesley's manual weborder output key-by-key (`StoreCode`+`ItemCode`): `StoreCode`, `ItemCode`, `ClaudeQty`, `WesQty`, `Difference`, `DiscrepancyType` (`Only in Claude` / `Only in Wes` / `Qty mismatch`). Formalized 2026-09-19 from a one-off comparison script used since the first Claude-vs-Wesley comparison (2026-09-10) - see `progress-log.md`. |
-| `scripts/qty-needed.js [input.xlsx] [--today YYYY-MM-DD]` | `<Desktop>/<MM-DD-YY>-Qty_Needed.xlsx` | Reorder qty between Period ETA and LTD per item (input `<Desktop>/Qty_Needed_Input.xlsx`: Item, 1% Average, Company Qty, Open Stores). Sheets `Qty Needed` (one row per item) and `Projection` (week by week). Not part of the allocation run - see `business-rules.md` "ETA / LTD" and "Weekly qty projection". Added 2026-10-25. |
 
 `Claude_results/` is gitignored in full (regenerated/delivered output, not source data) - same
 treatment the three files already had individually before the folder existed. There's also a

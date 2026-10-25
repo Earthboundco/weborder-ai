@@ -625,3 +625,8 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   `CalculatingQtysNeeded.xlsx`; ETA/LTD YRWK, weeks and LTD flag match Natalie's workbook for all 151
   items (the 7 FallWinter "Do not order" items are now blank, per the new rule). Qty needed is
   rounded up to a whole unit (confirmed by Wesley the same day, no case-pack rounding).
+- **Moved `scripts/qty-needed.js` and its ETA/LTD, projection and Qty Needed rules to
+  `../1pct-average-calc` (moved there 2026-10-25, per Wesley).** Removed the script, the two `business-rules.md` sections (now a pointer), the
+  `data-sources.md` entries and the resolved `open-questions.md` items from here. The 2026-10-25
+  entries above are kept as history. Re-tested there: same results (86285 = 0, 66614 = 1,702,
+  Natalie's 151 items).
