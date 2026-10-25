@@ -616,3 +616,12 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   8895, 8717 (`OpenQty` 708/881/708); `POR1."ShipDate"` (line delivery date), `OPOR."DocDueDate"`
   and `OPOR."U_V33_OrigETA"` all give those weeks for this item. Across all 2,627 open PO lines,
   ShipDate = DocDueDate on 2,167 and = OrigETA on 1,851; 98 open lines have a ShipDate already past.
+- Built `scripts/qty-needed.js` (per Wesley): reads `<Desktop>/Qty_Needed_Input.xlsx` (Item, 1%
+  Average, Company Qty, Open Stores), pulls everything else live from SAP, and writes
+  `<Desktop>/<MM-DD-YY>-Qty_Needed.xlsx` - sheet `Qty Needed` (one row per item: ETA/LTD, qty
+  needed, flags, open POs) and `Projection` (week by week). Stops before calculating if a required
+  lead time is missing. Tested with `--today 2026-10-25`: 86285 = 0 and 66614 = 1,702 with
+  "Advance 3rd PO# 8905" (as worked by hand); 86285's 40 projection weeks match
+  `CalculatingQtysNeeded.xlsx`; ETA/LTD YRWK, weeks and LTD flag match Natalie's workbook for all 151
+  items (the 7 FallWinter "Do not order" items are now blank, per the new rule). Qty needed is
+  rounded up to a whole unit - placeholder, see `open-questions.md`.

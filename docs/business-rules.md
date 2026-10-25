@@ -304,7 +304,7 @@ Wesley runs the process day to day is still CLI scripts, unchanged):
 Both scripts take an optional output path argument (default to the file names above in the
 current directory) and are gitignored as generated output, not source data.
 
-## ETA / LTD (Natalie's workbook - rules gathered 2026-10-25, not built yet)
+## ETA / LTD (Natalie's workbook - rules gathered 2026-10-25, built in `scripts/qty-needed.js`)
 
 Source workbook: `10-25-26_Natalie_ETA_LTD.xlsm`, sheet `Qtys`. It estimates when an item would
 reach the DC if ordered today (Period ETA YRWK) and the date the reorder qty must cover to
@@ -334,7 +334,7 @@ sources of the inputs).
   `Aroma and Spa`, `Clothing`, `HomeDecor`, `Impulse`, `Jewelry` (per Wesley, 2026-10-25) - this
   leaves out Not Retail supplies, which had 619 of the 624 missing lead times.
 
-## Weekly qty projection (Wesley's `CalculatingQtysNeeded.xlsx` - rules gathered 2026-10-25, not built yet)
+## Weekly qty projection (Wesley's `CalculatingQtysNeeded.xlsx` - rules gathered 2026-10-25, built in `scripts/qty-needed.js`)
 
 - Weekly table from today's YearWeek: start qty = company qty (today), then previous week's end
   qty; sold = item 1% average x product-group week % (`_Sales` column) x 100; end qty =

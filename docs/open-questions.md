@@ -100,3 +100,5 @@ Things we don't have answers for yet. Don't guess at these - ask Netto/Wesley.
   Product source: `SAP_Item_Information."VendorSource"` and `OITM."U_V33_Origin"` disagree for 282
   items in the lead-time statuses (VendorSource `I`, Origin `USA`) - which one is right?~~
   **resolved: use VendorSource.**
+- **Qty Needed rounding (2026-10-25, placeholder):** `scripts/qty-needed.js` rounds the reorder
+  qty **up** to a whole unit. Not confirmed with Wesley; no case-pack rounding either.
