@@ -350,3 +350,18 @@ sources of the inputs).
   Saturday has a one-day week 54 (Dec 31 - next is 2028). Ignore it: the table goes 53 -> 01 and
   the week-% file has no `-54` row. A PO line whose `ShipDate` falls in
   week 54 counts in week 53 of the same year, so its qty isn't dropped (confirmed by Wesley).
+- **Qty needed (reorder qty)** (per Wesley, 2026-10-25): max(0, sales from ETA week through LTD
+  week + extended MDQ - projected stock at the start of the ETA week - open-PO arrivals in the
+  ETA..LTD weeks). Extended MDQ = item MDQ x count of open stores (the minimum stock to keep). PO
+  arrivals landing between ETA and LTD count in full, even if stock dips below MDQ before they land.
+  Worked examples (2026-10-25): 86285 (1% avg 38, company qty 1,056, 140 stores) = 0;
+  66614 (1% avg 60, company qty 399, 140 stores) = 2,376 + 280 - 138 - 816 = **1,702**.
+- **Flag** "Company qty drops below Ext MDQ before next PO arrives" when the projected end-of-week
+  stock falls below extended MDQ in any week before the ETA week (the reorder can't fix those
+  weeks). 86285: 202702-202705; 66614: 202702-202705 and 202711-202713.
+- **Flag "Advance <nth> PO# <PO>"** (per Wesley, 2026-10-25): when the ETA week's end qty is below
+  extended MDQ, one flag for **every** open PO line landing after the ETA week (not just the first,
+  and including lines after the LTD week);
+  <nth> = its rank among all the item's open PO lines ordered by line ETA (`ShipDate`, ties
+  by PO#), overdue lines included. 66614: ETA-week end qty 12 < 280, open POs 8497, 8904, 8905 ->
+  "Advance 3rd PO# 8905". 86285: ETA-week end qty 1,620 -> no flag.
