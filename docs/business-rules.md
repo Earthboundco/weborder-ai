@@ -325,6 +325,11 @@ sources of the inputs).
 - **Period coverage:** 16 weeks for `Staple`, 12 weeks for every other status. Seasonal items
   (SpringSummer, FallWinter, StapleSS, StapleFW) whose signal is "Order" keep the season-end LTD
   instead; the 12/16-week coverage applies to non-seasonal items only (per Wesley, 2026-10-25).
+  Seasonal items whose signal is "Do not order" get a **blank** Period ETA and LTD (no 12-week
+  fallback - the workbook currently fills them with initial ETA + 12 weeks).
 - **Lead time is required** only for IStatus `Staple`, `Reorder`, `SpringSummer`, `FallWinter`,
   `Online`, `SelectedStores`, `FashionFocusStore`, `StapleSS`, `StapleFW`. If any of those items
   has no lead time, report them to Wesley **before** calculating ETA/LTD - don't default it.
+  **And** only for items in Department (`SAP_Item_Information."DEPTCODE"`) `Accessory`,
+  `Aroma and Spa`, `Clothing`, `HomeDecor`, `Impulse`, `Jewelry` (per Wesley, 2026-10-25) - this
+  leaves out Not Retail supplies, which had 619 of the 624 missing lead times.
