@@ -303,3 +303,28 @@ Wesley runs the process day to day is still CLI scripts, unchanged):
 
 Both scripts take an optional output path argument (default to the file names above in the
 current directory) and are gitignored as generated output, not source data.
+
+## ETA / LTD (Natalie's workbook - rules gathered 2026-10-25, not built yet)
+
+Source workbook: `10-25-26_Natalie_ETA_LTD.xlsm`, sheet `Qtys`. It estimates when an item would
+reach the DC if ordered today (Period ETA YRWK) and the date the reorder qty must cover to
+(Period LTD YRWK, "Last 'Til Date"). Wesley will specify changes to the workbook's formulas; the
+rules below are his clarifications so far (see `progress-log.md` 2026-10-25 for the live SAP
+sources of the inputs).
+
+- **Product source:** `Dom` / `Int'l`, and the full words `Domestic` / `International` are also
+  valid. Production start (deposit date) = today + 14 days for Domestic, + 28 for International.
+  Live source: `SAP_Item_Information."VendorSource"` (`D`/`I`, = the vendor's `OCRD."U_V33_VendType"`),
+  not the item's `OITM."U_V33_Origin"` (per Wesley, 2026-10-25 - the two disagree only for 282 Not
+  Retail supply items, where Origin says USA but the vendor and country of origin are foreign).
+- **Clothing** = DCS starts with `CL`, or Department = `Clothing` (either test is valid).
+- **Initial ETA** = production start + vendor lead time (days).
+- **Seasonal required weeks:** SpringSummer ETA week 05 (Clothing) / 10 (others), LTD week 30;
+  FallWinter ETA week 36, LTD week 53. `StapleSS` follows the SpringSummer rules and `StapleFW`
+  the FallWinter rules (per Wesley, 2026-10-25).
+- **Period coverage:** 16 weeks for `Staple`, 12 weeks for every other status. Seasonal items
+  (SpringSummer, FallWinter, StapleSS, StapleFW) whose signal is "Order" keep the season-end LTD
+  instead; the 12/16-week coverage applies to non-seasonal items only (per Wesley, 2026-10-25).
+- **Lead time is required** only for IStatus `Staple`, `Reorder`, `SpringSummer`, `FallWinter`,
+  `Online`, `SelectedStores`, `FashionFocusStore`, `StapleSS`, `StapleFW`. If any of those items
+  has no lead time, report them to Wesley **before** calculating ETA/LTD - don't default it.
