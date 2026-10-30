@@ -637,3 +637,14 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   fixtures; all 30+ supply/signage POs logged so far match), replacing the "... (supply order)"
   summaries; (b) Shipment Arrival Date = latest `OPDN."CreateDate"` of the PO's non-cancelled
   goods receipts (blank if none). Tested on the 10/30 POs plus 8374 / 8930 / 8923.
+- `scripts/ship-out-list.js` also takes PO numbers instead of a Source file (Wesley gave a PO list
+  only): Seq = order given; items + vendor from `ORDERS_DETAILED_SUM_W_CM` + `SAP_BP_MASTER_DATA`
+  (as in `po-notes.js`). Rerunning the 10-23 POs this way listed every item on each PO, while
+  Wesley's Source had listed a curated subset. 30 of the 40 POs matched exactly; the extras were
+  (a) items not received yet when the Source was made (e.g. 8373, 8375, 8454) and (b) older
+  reorder items riding on a new-launch PO (8028, 8258, 8280, 8290, 8299). No clean rule for (b) -
+  open question for Wesley. Labels also differ when the BP master name is longer than the name
+  Wesley typed (e.g. "US Games Systems, In" vs "US Games").
+- Built `Desktop/10-30-26-ShipOutList.xlsx` for 30 POs (264 items). All items at least partly
+  received, one SAP document per PO; only 8342 mixes launches (74532, 86979 are older reorders
+  next to 12 Holiday Fashion items) - flagged to Wesley, left in.

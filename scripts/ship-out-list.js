@@ -1,11 +1,14 @@
 // Builds the ShipOutList (one row per item, grouped by PO) from Wesley's "Source" PO list.
 //
-// Usage: node scripts/ship-out-list.js [<Source.xlsx>] [--template <file.xlsx>] [--out <file.xlsx>]
-// Reads <Desktop>/Source.xlsx unless a path is given; writes <Desktop>/<MM-DD-YY>-ShipOutList.xlsx
-// (today's date) unless --out is given.
+// Usage: node scripts/ship-out-list.js [<Source.xlsx> | <PO#> [<PO#> ...]] [--template <file.xlsx>]
+//                                      [--out <file.xlsx>]
+// Reads <Desktop>/Source.xlsx unless a path or PO numbers are given; writes
+// <Desktop>/<MM-DD-YY>-ShipOutList.xlsx (today's date) unless --out is given.
 //
 // Source: header row found by the "PO#" cell. Seq = the column just before PO#; "Item #s" holds one
 // item per line; "Vendor Name" feeds the PO label.
+// PO numbers instead (per Wesley 2026-10-30): Seq = 1, 2, ... in the order given; items and vendor
+// name come from HANA REPORTUSER.ORDERS_DETAILED_SUM_W_CM + SAP_BP_MASTER_DATA, as in po-notes.js.
 //
 // Format (header, column widths, data-row styles, conditional formatting, frozen header, zoom) comes
 // from the template - by default Wesley_tools/ShipOutList_Template.xlsx (Wesley's example
@@ -45,14 +48,16 @@ const BLANK = '(blank)';
 
 function parseArgs(argv) {
   let source = path.join(DESKTOP, 'Source.xlsx'), out = null, template = DEFAULT_TEMPLATE;
+  const poList = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--out') out = argv[++i];
     else if (a === '--template') template = argv[++i];
+    else if (/^\d+$/.test(a)) poList.push(Number(a));
     else if (!a.startsWith('--')) source = a;
     else throw new Error(`Unexpected argument: ${a}`);
   }
-  return { source, out, template };
+  return { source, poList: [...new Set(poList)], out, template };
 }
 
 const text = v => {
@@ -95,13 +100,29 @@ async function readSource(file) {
   return pos;
 }
 
+async function readPOs(poList, warnings) {
+  const rows = await hanaQuery(`
+    SELECT DISTINCT o."PO_NO", o."PO_VENDCODESAP", o."PO_ITEMCODE", b."SAP_VendorName"
+    FROM "REPORTUSER"."ORDERS_DETAILED_SUM_W_CM" o
+    LEFT JOIN "REPORTUSER"."SAP_BP_MASTER_DATA" b ON b."SAP_VendorCode" = o."PO_VENDCODESAP"
+    WHERE o."PO_NO" IN (${poList.map(() => '?').join(', ')})`, poList);
+  return poList.map((po, idx) => {
+    const lines = rows.filter(r => Number(r.PO_NO) === po);
+    if (!lines.length) warnings.push(`PO ${po}: not found in ORDERS_DETAILED_SUM_W_CM - skipped`);
+    const vendors = [...new Set(lines.map(l => l.SAP_VendorName || l.PO_VENDCODESAP).filter(Boolean))];
+    if (vendors.length > 1) warnings.push(`PO ${po}: more than one vendor (${vendors.join(', ')})`);
+    const items = [...new Set(lines.map(l => String(l.PO_ITEMCODE).trim()))];
+    return { seq: idx + 1, po, vendor: vendors[0] || '', items, expected: null };
+  }).filter(p => p.items.length);
+}
+
 async function main() {
-  const { source, out, template } = parseArgs(process.argv.slice(2));
-  if (!fs.existsSync(source)) throw new Error(`Source not found: ${source}`);
+  const { source, poList, out, template } = parseArgs(process.argv.slice(2));
+  if (!poList.length && !fs.existsSync(source)) throw new Error(`Source not found: ${source}`);
   if (!fs.existsSync(template)) throw new Error(`Template not found: ${template} (pass --template <file.xlsx>)`);
 
-  const pos = await readSource(source);
   const warnings = [];
+  const pos = poList.length ? await readPOs(poList, warnings) : await readSource(source);
   for (const p of pos) {
     if (!p.items.length) warnings.push(`PO ${p.po}: no item numbers in "Item #s"`);
     if (p.expected && p.expected !== p.items.length) warnings.push(`PO ${p.po}: "Number of items" says ${p.expected}, "Item #s" lists ${p.items.length}`);
