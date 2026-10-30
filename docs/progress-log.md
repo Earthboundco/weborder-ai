@@ -630,3 +630,10 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   `data-sources.md` entries and the resolved `open-questions.md` items from here. The 2026-10-25
   entries above are kept as history. Re-tested there: same results (86285 = 0, 66614 = 1,702,
   Natalie's 151 items).
+
+## 2026-10-30
+- Per Wesley, `scripts/po-notes.js`: (a) Product = "Non retail" when every item on the PO is in
+  the Not Retail department (`SAP_Item_Information.DCS_CODE` starting `NR` - supplies, signage,
+  fixtures; all 30+ supply/signage POs logged so far match), replacing the "... (supply order)"
+  summaries; (b) Shipment Arrival Date = latest `OPDN."CreateDate"` of the PO's non-cancelled
+  goods receipts (blank if none). Tested on the 10/30 POs plus 8374 / 8930 / 8923.

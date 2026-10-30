@@ -18,14 +18,20 @@
 //   - HDQ received status: EARTHBOUND.POR1 "Quantity" vs "OpenQty" (SAP's own open qty, net of
 //     returns - summing goods receipts double-counts a returned/re-entered GRPO, e.g. PO 8374)
 //
-// Columns filled: PO#, Vendor Name, Product (<=40 chars), Item #s (one per line), Number of items,
+//   - Shipment Arrival Date: latest "CreateDate" of the PO's non-cancelled goods receipts
+//     (EARTHBOUND.OPDN/PDN1, PDN1."BaseType" = 22)
+//
+// Columns filled: PO#, Vendor Name, Shipment Arrival Date (per Wesley 2026-10-30: date the last
+// GRPO was created; blank if none), Product (<=40 chars), Item #s (one per line), Number of items,
 // Launch Code (unique, one per line), Shipment instruction and/or PO Note (= PO Remarks, per
 // Wesley 2026-10-20), HDQ received status (per Wesley 2026-10-22: "SAP rcvd" / "SAP part rcvd as
 // MM/DD/YY" / "SAP not rcvd as MM/DD/YY", dated the run day), PO source (Domestic/International),
 // LCO done? = "No", Items' status. Every other column is left blank, per Wesley.
 //
-// Product: pass --product for each PO (a human summary reads best). Without it, a fallback is
-// built from the most common item-description words (before the first '-').
+// Product: "Non retail" when every item on the PO is in the Not Retail department (DCS code starts
+// with "NR" - store supplies, signage, fixtures; per Wesley 2026-10-30). Otherwise pass --product
+// for each PO (a human summary reads best); without it, a fallback is built from the most common
+// item-description words (before the first '-').
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -89,7 +95,7 @@ async function main() {
   const rows = await hanaQuery(`
     SELECT DISTINCT o."PO_NO", o."PO_VENDCODESAP", o."PO_VENDTYPE", o."PO_ITEMCODE",
            b."SAP_VendorName", b."VendorType",
-           i."ITEMDESCRIPTION", i."LAUNCH_CODE", i."WEBORDER", i."WEBVIEW"
+           i."ITEMDESCRIPTION", i."DCS_CODE", i."LAUNCH_CODE", i."WEBORDER", i."WEBVIEW"
     FROM "REPORTUSER"."ORDERS_DETAILED_SUM_W_CM" o
     LEFT JOIN "REPORTUSER"."SAP_BP_MASTER_DATA" b ON b."SAP_VendorCode" = o."PO_VENDCODESAP"
     LEFT JOIN "REPORTUSER"."SAP_Item_Information" i ON i."ITEMNUMBER" = o."PO_ITEMCODE"
@@ -104,6 +110,13 @@ async function main() {
     SELECT p."DocNum", p."CardCode", l."Quantity", l."OpenQty"
     FROM "EARTHBOUND"."OPOR" p JOIN "EARTHBOUND"."POR1" l ON l."DocEntry" = p."DocEntry"
     WHERE p."DocNum" IN (${pos.map(() => '?').join(', ')})`, pos);
+  const grpoDates = await hanaQuery(`
+    SELECT p."DocNum", p."CardCode", TO_VARCHAR(MAX(g."CreateDate"), 'YYYY-MM-DD') AS "LastGrpo"
+    FROM "EARTHBOUND"."OPOR" p
+    JOIN "EARTHBOUND"."PDN1" l ON l."BaseType" = 22 AND l."BaseEntry" = p."DocEntry"
+    JOIN "EARTHBOUND"."OPDN" g ON g."DocEntry" = l."DocEntry" AND g."CANCELED" = 'N'
+    WHERE p."DocNum" IN (${pos.map(() => '?').join(', ')})
+    GROUP BY p."DocNum", p."CardCode"`, pos);
 
   const now = new Date();
   const mm = String(now.getMonth() + 1).padStart(2, '0'), dd = String(now.getDate()).padStart(2, '0'), yy = String(now.getFullYear()).slice(-2);
@@ -140,7 +153,9 @@ async function main() {
     const missing = items.filter(i => i.WEBORDER == null && i.WEBVIEW == null && i.LAUNCH_CODE == null).map(i => i.PO_ITEMCODE);
     if (missing.length) warnings.push(`PO ${po}: no SAP_Item_Information row for item(s) ${missing.join(', ')}`);
     const launch = [...new Set(items.map(i => (i.LAUNCH_CODE || '').trim()).filter(Boolean))];
-    let product = products.get(po) ?? (items.length ? fallbackProduct(items) : null);
+    const nonRetail = items.length > 0 && items.every(i => /^NR\b/.test(String(i.DCS_CODE || '').trim()));
+    if (nonRetail && products.has(po)) warnings.push(`PO ${po}: all items are Not Retail - Product set to "Non retail" (--product ignored)`);
+    let product = nonRetail ? 'Non retail' : products.get(po) ?? (items.length ? fallbackProduct(items) : null);
     if (product && product.length > PRODUCT_MAX) { warnings.push(`PO ${po}: Product cut to ${PRODUCT_MAX} characters`); product = product.slice(0, PRODUCT_MAX); }
     const itemNos = items.map(i => String(i.PO_ITEMCODE));
     const vendCodes = new Set(lines.map(l => l.PO_VENDCODESAP).filter(Boolean));
@@ -157,10 +172,16 @@ async function main() {
       const open = qtyLines.reduce((s, l) => s + Number(l.OpenQty), 0);
       rcvdStatus = ordered - open <= 0 ? `SAP not rcvd as ${asOf}` : open <= 0 ? 'SAP rcvd' : `SAP part rcvd as ${asOf}`;
     } else if (lines.length) warnings.push(`PO ${po}: no POR1 lines found - HDQ received status left blank`);
+    let grpo = grpoDates.filter(g => Number(g.DocNum) === po);
+    if (vendCodes.size) grpo = grpo.filter(g => vendCodes.has(g.CardCode));
+    const lastGrpo = grpo.map(g => g.LastGrpo).filter(Boolean).sort().pop();
+    // Built from the YYYY-MM-DD string as a UTC date so Excel shows the same day on any timezone.
+    const arrival = lastGrpo ? new Date(Date.UTC(+lastGrpo.slice(0, 4), +lastGrpo.slice(5, 7) - 1, +lastGrpo.slice(8, 10))) : null;
 
     const values = new Array(18).fill(null);
     values[0] = po;                                                        // PO#
     values[2] = vendors[0] || null;                                        // Vendor Name
+    values[3] = arrival;                                                   // Shipment Arrival Date (last GRPO created)
     values[4] = product;                                                   // Product
     values[5] = itemNos.length === 1 && /^\d+$/.test(itemNos[0]) ? Number(itemNos[0]) : (itemNos.join('\n') || null); // Item #s
     values[6] = items.length || null;                                      // Number of items
