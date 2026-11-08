@@ -15,3 +15,6 @@ WO_Discrepancies_*.csv
 
 # Generated deliverables/reports handed to Wesley each run - regenerated fresh, not source data
 /Claude_results/
+
+# DPS group allocation project - generated workbooks
+/DPS group allocation project/Claude_results/

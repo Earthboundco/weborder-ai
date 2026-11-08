@@ -1,0 +1,140 @@
+DPS group allocation project
+
+Summary: the purpose of this project is to define how many units of an item a store should have on-hand when we are allocating more units to it during our weekly replenishment process. Stores whith expected high sales should have more units on-hand than stores with low sales. The top stores in sales are defined based on the period of the year we are analysing, and also based on the type of item we are analysing. To define how many units of an item a store should have on-hand for an initial allocation (new items with no sales history) and/or replenishment purposes, we need to:
+
+Step 1) Rank of the stores and group them
+Step 2) Check the average units sold of the items per group of stores based on the item's DCS, current Sale Price (price point), and size (when applicable)
+
+------------------
+
+Step 1) Ranking the stores:
+
+Step 1a) Defining the periods of the year to be analysed:
+We divide the year into 8 distinct periods in order to rank the stores based on sales. The periods of the year are: 
+1) Pre-Spring, 2) Spring Break, 3) Summer 1, 4) Summer 2, 5) Back-to-school, 6) Fall 1, 7) Fall 2 and 8) Holidays.
+
+1) Weeks 1-7: Pre-Spring
+2) Weeks 7-14: Spring Break
+3) Weeks 14-21: Summer 1
+4) Weeks 21-28: Summer 2
+5) Weeks 28-34: Back-to-school
+6) Weeks 34-40: Fall 1
+7) Weeks 40-46: Fall 2
+8) Weeks 46-53: Holidays
+
+Step 1b) Defining the groups of DCSs to be analyzed:
+Instead of checking the stores' sales rank by DCS in each of the 8 pre-defined periods of the year, we combine similar DCS's into groups. We have established a few groups of DCS's when ranking the stores, these are the groups and DCSs in each group:
+
+01) AC RB (reusable bags - all DCSs): All DCSs
+02) AC BA/AC HA/AC MI/AC WO (other accessories): AC BA, AC HA, AC MI, AC WO HR, AC WO SC, AC WO SU
+03) AS BT/AS CA/AS SS (all aroma & spa): AS BT MI, AS CA, AS SS, AS IB, AS IN MI, AS IN SC, AS OB, AS OI
+04) AS IB/AS IN (incense and burners): AS IB, AS IN MI, AS IN SC
+05) AS OB/AS OI (oil burners and oils): AS OB, AS OI
+06) CL ME/CL WO (all clothing): CL ME OW, CL ME PA, CL ME SH, CL ME SO, CL ME TS, CL WO DR, CL WO OW, CL WO PA, CL WO SH, CL WO SK, CL WO SO, CL WO TS
+07) HD DO/HD KB/HD MW/HD RM (most home decor): HD DO CD, HD DO DA, HD DO SB, HD KB, HD MW, HD RM
+08) HD TP/HD TX (curtains tapestries & textiles): HD TP, HD TX
+09) HD WD (wall decor accessories & butterflies): HD WD AC, HD WD BF
+10) IM BK/IM GF (all impulse): IM BK, IM GF
+11) JE ME/JE WO (all jewelry): JE ME BR, JE ME NK, JE ME RI, JE WO AK, JE WO BR, JE WO EA, JE WO NK, JE WO RI
+
+Step 1c) Ranking the stores based on the period of the year and DCSs group:
+
+1) For each eligible store (store that is currently open), add up its gross sales (EXT_PRICE, positive rows) for the specific period of the year during the last 3 years: 2023, 2024 and 2025 in the case of doing this exercise today (we are in November of 2026).
+2) Take each store's SINGLE BEST year of the three (not the average, not the total).
+3) Rank all stores from highest best-year sales to lowest: Rank #1 = best-selling store, #2 = second best, and so on.
+4) Ties at a selection cutoff (same best-year sales): larger store ranks higher (5-XLg, 4-Avg, 3-Sml, 2-XSm, 1-IttyBitty).
+5) Special adjustment - 479 Brandon: it moved to a much smaller location in the same mall this year, so place 479 Brandon ONE position below 462 Countryside (if 462 is #34, 479 becomes #35, and every store below moves down one).
+6) A store not open during the complete period of the year being analyzed (all weeks of the period) in at least 1 of the 3 years being checked, is matched with a similar store in sales performance during the previous weeks counting from last week (max of 12 weeks). The similar store should be within 500 miles (straight line), or in the same state, and should be of the same type (tourist or mall).
+
+The store groups are: A1, A2, A3, B, C, D and E.
+Defining the stores in each group:
+A1: 1 store (the top ranked store)
+A2: 5 stores (the next 5 high ranked stores)
+A3: 6 stores (the next 6 high ranked stores)
+B: 45 stores (the next 45 stores in the rank)
+C: 57 stores (the next 57 stores in the rank)
+D: 20 stores (the next 20 stores in the rank)
+E: 5 stores (the bottom 5 stores in the rank)
+
+Note: the groups A1, A2, A3, B, D and E have to necessarily follow the above number of stores in the group. The group C can vary the number of stores in it.
+
+------------------
+
+Step 2) Checking average units sold of the items based on the item's DCS, current Sale Price (price point), and size (when applicable)
+
+Step 2a) Creating the DPS codes
+We assign a DPS code (DPS stands for DCS, Price and Size) for each item to group them.
+The "DPS code" formula is: DCS_Code & "/" & Price_Adjusted & "/" & Size_Adjusted
+
+Where:
+
+Price_Adjusted:
+=IF(SalePrice>500,">=500",
+IF(SalePrice>400,"400-500",
+IF(SalePrice>350,"350-400",
+IF(SalePrice>300,"300-350",
+IF(SalePrice>250,"250-300",
+IF(SalePrice>200,"200-250",
+IF(SalePrice>150,"150-200",
+IF(SalePrice>101,"101-150",
+IF(SalePrice>91,"91-101",
+IF(SalePrice>81,"81-91",
+IF(SalePrice>76,"76-81",
+IF(SalePrice>71,"71-76",
+IF(SalePrice>66,"66-71",
+IF(SalePrice>61,"61-66",
+IF(SalePrice>56,"56-61",
+IF(SalePrice>51,"51-56",
+IF(SalePrice>46,"46-51",
+IF(SalePrice>41,"41-46",
+IF(SalePrice>36,"36-41",
+IF(SalePrice>31,"31-36",
+IF(SalePrice>26,"26-31",
+IF(SalePrice>21,"21-26",
+IF(SalePrice>17,"17-21",
+IF(SalePrice>13,"13-17",
+IF(SalePrice>10,"10-13",
+IF(SalePrice>7,"7-10",
+IF(SalePrice>5,"5-7",
+IF(SalePrice>3,"3-5",
+IF(SalePrice>1,"1-3",
+"0-1")))))))))))))))))))))))))))))
+
+Size_Adjusted ("||" stands for OR condition):
+=IF(LEFT(Items[DCS_Code],2)="CL",
+IF(Size="XS" || Size="XSM", "XS",
+IF(Size="S" || Size="SM" || Size="XS/S", "S",
+IF(Size="M" || Size="MD" || Size="25" || Size="26" || Size="27" || Size="28" || Size="29" || Size="30" || Size="31" || Size="REG" || Size="S/M/L" || Size="S/M" || Size="M/L", "M",
+IF(Size="L" || Size="LG" || Size="32" || Size="33" || Size="34" || Size="35" || Size="36" || Size="37" || Size="38" || Size="39" || Size="40" || Size="41" || Size="42" || Size="70 IN" || Size="L/XL", "L",
+IF(Size="XL" || Size="XLG", "XL",
+IF(Size="XXL" || Size="2XL" || Size="2X" || Size="XL/XXL" || Size="2XL/XXL" || Size="XL/2X", "2X",
+IF(Size="3X" || Size="3XL", "3X",
+IF(Size="4X" || Size="4XL", "4X",
+IF(ISBLANK(Size) || Size="(blank)" || Size="O/S" || Size="OS", "No", Size))))))))),
+"No")
+
+Examples of codes: AC BA/10-13/No, AC RB/7-10/No, CL WO DR/46-51/M, JE WO NK/10-13/No.
+
+Step 2b) Creating an allocation table
+
+Example of how to create an allocation table:
+- Rank the stores for the Holidays period (Weeks 46-53: Holidays) and define the stores in each group: A1, A2, A3, B, C, D and E.
+- Check the weekly average units sold for each store group (A1, A2, A3, B, C, D and E), during the Holidays period, for the DCS "JE WO NK", for the items with a price point between $10 and $13 and no size (DPS cde: JE WO NK/10-13/No).
+- Create a table with "DPS code", "Store group", and the "Weekly average units sold" multiplied by 3.
+
+=======================================
+
+Answers:
+
+Weeks when best years differ in length: each store’s best year can have a different number of Holidays weeks, so I’d convert to weekly per pair first. That means each store × item pair’s units ÷ that store’s weeks, then averaged over all pairs in the group. It’s the same formula, just correct when the weeks differ.
+My answer: Yes, that is OK.
+
+479 Brandon’s history: its 2023–2025 sales come from the old, larger location. Should its sales count in its group’s average, or should it be left out like the stores without history until end of May 2027?
+My answer: leave 479 Brandon out like the stores without history until end of May 2027.
+
+The thing I’ll check: I still need to confirm that salesfact’s WEEK/YEAR columns are your fiscal YearWeek, or find the fiscal calendar table. I’ll do that when building, not before.
+My answer: Yes, salesfact’s WEEK/YEAR columns are my fiscal YearWeek.
+
+Do you understand the instructions? Do not create anything yet, I just want to clarify this step first and answer any questions you might have.
+
+

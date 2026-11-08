@@ -13,6 +13,9 @@ without re-deriving everything from scratch. Read these in order:
 5. **`progress-log.md`** - dated log of what was built/decided in each session, oldest first.
    Append to this, don't rewrite history.
 
+Sub-project: **`../DPS group allocation project/`** - sales-based allocation qty per DPS code and store
+group (see its README).
+
 ## Quick facts
 - Our schema/database to build in: `EBTAI` (empty when we started - now holds the tables/views
   described in `data-sources.md`).

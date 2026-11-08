@@ -648,3 +648,10 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
 - Built `Desktop/10-30-26-ShipOutList.xlsx` for 30 POs (264 items). All items at least partly
   received, one SAP document per PO; only 8342 mixes launches (74532, 86979 are older reorders
   next to 12 Holiday Fashion items) - flagged to Wesley, left in.
+
+## 2026-11-08
+- New sub-project **`DPS group allocation project/`** (per Wesley): calculates the per-store-group
+  allocation qty by DPS code from sales history (store ranking by period x DCS group, then daily
+  units of the top 30% of store x item pairs, x 3). Its own README, `docs/` (business rules,
+  progress log) and `scripts/build-dps-table.js`; results git-ignored. Not wired into the
+  allocation pipeline - `DPS_Code_allocation_table` is still the weekly input.
