@@ -3,7 +3,8 @@
 // Usage: node scripts/po-notes.js <PO#> [<PO#> ...] [--product <PO#>="summary"]
 //                                 [--template <file.xlsx>] [--out <file.xlsx>]
 //   e.g. node scripts/po-notes.js 8325 8322 8340 --product 8325="Fragrance oils"
-// Writes <Desktop>/<MM-DD-YY>-for-PO-Notes.xlsx (today's date) unless --out is given.
+// Writes <Desktop>/Claude files/<MM-DD-YY>-for-PO-Notes.xlsx (today's date) unless --out is given
+// (per Wesley 2026-11-09: his outputs go in "Claude files", not loose on the Desktop).
 //
 // Format (column widths, header, cell styles) comes from the template - by default
 // Wesley_tools/PO_Notes_Template.xlsx (Wesley's Sample.xlsx, 2026-10-20); data rows copy the
@@ -38,7 +39,7 @@ const path = require('path');
 const ExcelJS = require('exceljs');
 const { hanaQuery, closeHana } = require('../hana');
 
-const DESKTOP = path.join(os.homedir(), 'OneDrive - Earthbound Trading Company', 'Desktop');
+const OUT_DIR = path.join(os.homedir(), 'OneDrive - Earthbound Trading Company', 'Desktop', 'Claude files');
 // Wesley_tools/ is gitignored (personal files), so the template exists only on Wesley's machine.
 const DEFAULT_TEMPLATE = path.join(__dirname, '..', 'Wesley_tools', 'PO_Notes_Template.xlsx');
 const PRODUCT_MAX = 40;
@@ -204,7 +205,8 @@ async function main() {
   });
 
   const stamp = `${mm}-${dd}-${yy}`;
-  const file = out ? path.resolve(out) : path.join(DESKTOP, `${stamp}-for-PO-Notes.xlsx`);
+  const file = out ? path.resolve(out) : path.join(OUT_DIR, `${stamp}-for-PO-Notes.xlsx`);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
   await tpl.xlsx.writeFile(file);
   for (const w of warnings) console.warn(`WARNING: ${w}`);
   console.log(`Wrote ${file}`);

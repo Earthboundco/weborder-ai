@@ -655,3 +655,7 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   units of the top 30% of store x item pairs, x 3). Its own README, `docs/` (business rules,
   progress log) and `scripts/build-dps-table.js`; results git-ignored. Not wired into the
   allocation pipeline - `DPS_Code_allocation_table` is still the weekly input.
+
+## 2026-11-09
+- `scripts/po-notes.js` now writes to `Desktop\Claude files\` by default instead of the Desktop
+  (per Wesley: all his output files go there). The folder is created if missing; `--out` still overrides.
