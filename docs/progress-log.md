@@ -659,3 +659,20 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
 ## 2026-11-09
 - `scripts/po-notes.js` now writes to `Desktop\Claude files\` by default instead of the Desktop
   (per Wesley: all his output files go there). The folder is created if missing; `--out` still overrides.
+
+## 2026-11-10
+- New **`scripts/MinMax file/`**: `build-minmax.js` builds Wesley's MinMax upload xlsx (per item the
+  DC row 000/0 then the stores, CODE/ID as text) from `stores.csv`, the 160 CODE/ID pairs of his
+  `MinMaxFile.xlsx` reference (no longer on his Desktop). It reports any E-ACTIVE Store Directory store
+  missing from the list and any ID mismatch; inactive listed stores are kept (Wesley, 2026-11-02).
+  First run: `Desktop\Claude files\MinMax_2026-11-10.xlsx` for item 46279 (DC 10/20, stores 1/1).
+- Wesley couldn't use that .xlsx: MinMax files must be built from his
+  `P:\PlanAllocation\MinMax_Files\Information\Master file for Claude.xls` (copy, fill `Draft`, drop
+  unused rows, the "end" row and cols M:N, reset names `draftdata` / `Replinishment` to A1:K<last row>),
+  since they're uploaded through his Access form. Rebuilt as `Desktop\Claude files\MinMax_2026-11-10.xls`
+  via Excel COM. `build-minmax.js` still produces only the plain xlsx; `stores.csv` matches the master.
+- Rewrote `scripts/MinMax file/build-minmax.js` for that process: it checks the Store Directory and SAP
+  (`EARTHBOUND.OITM`) for the items, then `fill-master.ps1` (Excel COM) copies the master, loads the rows
+  (copies the master's text CODE/ID block per item; inserts rows above "end" past 8000), trims it, resets
+  the names and reopens the file to verify every row. Default output `Desktop\Claude files\MinMax_<date>.xls`,
+  never overwritten. Tested: 1 item (identical to the hand-made file), 3 items, 54 items (8640 rows).
