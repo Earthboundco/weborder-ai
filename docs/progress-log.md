@@ -676,3 +676,7 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   (copies the master's text CODE/ID block per item; inserts rows above "end" past 8000), trims it, resets
   the names and reopens the file to verify every row. Default output `Desktop\Claude files\MinMax_<date>.xls`,
   never overwritten. Tested: 1 item (identical to the hand-made file), 3 items, 54 items (8640 rows).
+
+## 2026-11-11
+- `scripts/po-notes.js`: Shipment Arrival Date now shows "Waiting" when the PO has no goods receipt
+  yet (was blank), per Wesley.

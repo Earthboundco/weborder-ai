@@ -23,7 +23,7 @@
 //     (EARTHBOUND.OPDN/PDN1, PDN1."BaseType" = 22)
 //
 // Columns filled: PO#, Vendor Name, Shipment Arrival Date (per Wesley 2026-10-30: date the last
-// GRPO was created; blank if none), Product (<=40 chars), Item #s (one per line), Number of items,
+// GRPO was created; "Waiting" if none, per Wesley 2026-11-11), Product (<=40 chars), Item #s (one per line), Number of items,
 // Launch Code (unique, one per line), Shipment instruction and/or PO Note (= PO Remarks, per
 // Wesley 2026-10-20), HDQ received status (per Wesley 2026-10-22: "SAP rcvd" / "SAP part rcvd as
 // MM/DD/YY" / "SAP not rcvd as MM/DD/YY", dated the run day), PO source (Domestic/International),
@@ -177,7 +177,7 @@ async function main() {
     if (vendCodes.size) grpo = grpo.filter(g => vendCodes.has(g.CardCode));
     const lastGrpo = grpo.map(g => g.LastGrpo).filter(Boolean).sort().pop();
     // Built from the YYYY-MM-DD string as a UTC date so Excel shows the same day on any timezone.
-    const arrival = lastGrpo ? new Date(Date.UTC(+lastGrpo.slice(0, 4), +lastGrpo.slice(5, 7) - 1, +lastGrpo.slice(8, 10))) : null;
+    const arrival = lastGrpo ? new Date(Date.UTC(+lastGrpo.slice(0, 4), +lastGrpo.slice(5, 7) - 1, +lastGrpo.slice(8, 10))) : 'Waiting';
 
     const values = new Array(18).fill(null);
     values[0] = po;                                                        // PO#
