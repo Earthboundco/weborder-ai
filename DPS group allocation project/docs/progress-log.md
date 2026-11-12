@@ -24,3 +24,12 @@
   all 11 DCS groups, years and matching weeks follow the run date. Verified (with an INVENTORY_V
   test copy, SAP still down) that it reproduces both settled results.
 - Project saved to `weborder-ai/DPS group allocation project` (per Wesley).
+
+## 2026-11-12
+- Summer 1 rerun from SAP (as of 2026-11-08): 10/8/8/7/6/5/5, same as the provisional INVENTORY_V
+  run - Summer 1 is no longer provisional. Workbook
+  `Claude_results/11-12-26-DPS_Allocation_JE_WO_NK_10-13_No_Summer1_SAP.xlsx`.
+- Fix in `build-dps-table.js`: recent-week sales before a store's open date are ignored. 547 Grand
+  Junction (opens 2026-11-14) had 2 pre-opening rows (Nov 4-5, $3.88) and was being matched on $0
+  jewelry sales instead of going to rank 57. Holidays rechecked: unchanged.
+- Only ranking change vs the provisional run: 544 Deptford matched to 322 instead of 436 (C either way).

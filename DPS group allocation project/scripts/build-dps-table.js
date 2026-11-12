@@ -104,10 +104,12 @@ async function main() {
     WHERE YEAR IN (${YEARS.join(',')}) AND WEEK BETWEEN ${pFrom} AND ${pTo} GROUP BY YEAR`)).recordset;
   const periodStart = new Map(cal.map(r => [r.y, r.d0]));
   const weekStart = new Date(TODAY); weekStart.setUTCDate(TODAY.getUTCDate() - TODAY.getUTCDay());   // Sunday of this week
-  const recentWks = (await pool.request().query(`
-    SELECT YEAR * 100 + WEEK yw, MIN(DATE) d0 FROM EBT.dbo.salesfact
+  const recentCal = (await pool.request().query(`
+    SELECT YEAR * 100 + WEEK yw, MAX(DATE) d1 FROM EBT.dbo.salesfact
     WHERE DATE >= '${iso(new Date(weekStart - 120 * 864e5))}' AND DATE < '${iso(weekStart)}'
-    GROUP BY YEAR * 100 + WEEK`)).recordset.sort((a, b) => a.yw - b.yw).slice(-MATCH_MAX_WEEKS).map(r => r.yw);
+    GROUP BY YEAR * 100 + WEEK`)).recordset.sort((a, b) => a.yw - b.yw).slice(-MATCH_MAX_WEEKS);
+  const recentWks = recentCal.map(r => r.yw);
+  const weekEnd = new Map(recentCal.map(r => [r.yw, r.d1]));
   log(`calendar loaded: years ${YEARS.join('/')}, match weeks ${recentWks[0]}-${recentWks[recentWks.length - 1]}`);
 
   // ---------- items: current SAP attributes ----------
@@ -141,7 +143,11 @@ async function main() {
     if (!(r.p > 0) || !byId.has(r.st)) continue;
     const m = yearSales.get(r.st) || {}; m[r.y] = (m[r.y] || 0) + r.p; yearSales.set(r.st, m);
   }
-  for (const r of recent) { const m = recentBy.get(r.st) || {}; m[r.yw] = r.p; recentBy.set(r.st, m); }
+  for (const r of recent) {
+    // Ignore weeks that end before the store's open date (pre-opening setup/test rows, e.g. 547 on 2026-11-04/05).
+    if (byId.has(r.st) && byId.get(r.st).opened && weekEnd.get(r.yw) < byId.get(r.st).opened) continue;
+    const m = recentBy.get(r.st) || {}; m[r.yw] = r.p; recentBy.set(r.st, m);
+  }
   for (const s of stores) {
     s.sales = yearSales.get(s.id) || {};
     s.completeYears = YEARS.filter(y => periodStart.has(y) && s.opened <= periodStart.get(y));

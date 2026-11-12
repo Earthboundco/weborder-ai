@@ -680,3 +680,8 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
 ## 2026-11-11
 - `scripts/po-notes.js`: Shipment Arrival Date now shows "Waiting" when the PO has no goods receipt
   yet (was blank), per Wesley.
+
+## 2026-11-12
+- DPS group allocation project: Summer 1 (JE WO NK/10-13/No) rerun from SAP - 10/8/8/7/6/5/5, no
+  longer provisional. `build-dps-table.js` now ignores pre-opening sales rows when deciding whether a
+  new store has sales (547 Grand Junction). Details in the project's `docs/progress-log.md`.

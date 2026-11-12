@@ -109,6 +109,8 @@ Confirmed by Wesley 2026-11-07:
 - Similarity = sales of the DCS group being ranked (same last <=12 weeks). The matched store is placed
   1 rank after its match.
 - A store with no sales yet (e.g. 547 Grand Junction) is placed at the last B position (rank 57).
+  Sales in weeks that end before the store's open date don't count (547 had 2 pre-opening rows on
+  2026-11-04/05, $3.88 - setup/test transactions).
 - 479 Brandon goes directly below 462 in EVERY ranking (all periods and DCS groups), even if its own
   sales would put it lower. Applies until end of May 2027 (then it has a full year in the new location).
 - Size tie-break applies to any tie, not only at group cutoffs; same size -> lower store code first.
@@ -224,3 +226,7 @@ Data found 2026-11-07 (`EBT.dbo.[Store Directory]`, open = non-blank `WStoreType
   rerun Summer 1 from SAP once it is back.
 - 2026-11-08 settled method (top 30%, x 3) results for JE WO NK/10-13/No (A1/A2/A3/B/C/D/E):
   Holidays 9/9/8/8/7/6/5; Summer 1 10/8/8/7/6/5/5 (Summer 1 provisional - INVENTORY_V DCS).
+- 2026-11-12 Summer 1 rerun from SAP (as of 2026-11-08): same result, 10/8/8/7/6/5/5 - no longer
+  provisional. Only ranking change: 544 Deptford matched to 322 Myrtle Beach II instead of 436 Great
+  Northern (C either way; matched stores are not in the average). Holidays rerun with the pre-opening
+  fix: unchanged, 9/9/8/8/7/6/5.

@@ -31,9 +31,8 @@ node "DPS group allocation project/scripts/build-dps-table.js" "DPS group alloca
 Periods: Pre-Spring, Spring Break, Summer 1, Summer 2, Back-to-school, Fall 1, Fall 2, Holidays.
 Optional `--today YYYY-MM-DD` to run as of a past date. Needs EBT SQL Server and SAP HANA.
 
-## Status (2026-11-08)
-- Built and settled for one DPS code: `JE WO NK/10-13/No`, Holidays and Summer 1.
-- Summer 1 result is provisional (SAP was down; DCS came from EBT `INVENTORY_V` that run only) -
-  rerun from SAP.
+## Status (2026-11-12)
+- Built and settled for one DPS code: `JE WO NK/10-13/No`, Holidays (9/9/8/8/7/6/5) and Summer 1
+  (10/8/8/7/6/5/5, rerun from SAP 2026-11-12).
 - Next: rule for DPS codes with no sales history (higher price -> fewer units); then all DPS
   codes and all periods.
