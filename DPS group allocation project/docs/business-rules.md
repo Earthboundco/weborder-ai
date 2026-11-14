@@ -195,11 +195,19 @@ Per (period, DPS code), using the ranking for that period x the DCS group the DP
    SAP. One item can land in several DPS codes if it sold at different prices.
 3. A store "carried" an item if it sold >= 1 unit of it (in that DPS code) in its best year's period
    weeks. Under-counts stores that had it but sold none - accepted.
-4. Per (store x item) pair - **daily method, settled 2026-11-08 "for now" (per Wesley)**:
-   - Days = first to last qualifying sale date in the period, both ends included; **minimum 7 days**
-     (so a single 1-unit sale = 1/7 per day = 1.0 per week).
-   - Daily units = pair's qualifying units / days.
-5. Per group: rank pairs by daily units, **keep only the top 30%** (count rounded up), average them,
+4. Per (store x item) pair - **best 7-day window (per Wesley 2026-11-13, his "Daily units sold
+   test.xlsx")**:
+   - For each qualifying sale date: window = that date to date + 6, never past the period's last day
+     in that store's best year (looked up from salesfact; Holidays ends 12/31 in 2023-2025).
+   - Units in the window = only the qualifying sales (same DPS code: $10 < price <= $13 for 10-13).
+   - Window rate = units / max(window days, 7) - the 7-day minimum, so every window is divided by 7.
+   - Daily units = the highest window rate (ties: earliest window).
+   - Test case: 376 Stonebriar x 91665, 2025 -> best window Dec 21-27, 7 units / 7 = 1.0 (matches
+     Wesley's sheet; the old method gave 11 / 15 = 0.733).
+   - Superseded (2026-11-08 to 2026-11-13): days = first to last qualifying sale, min 7; daily =
+     all qualifying units / days. Both scripts use the best window since 2026-11-13.
+5. Per group: rank pairs by daily units, **keep only the top 50%** (count rounded up; rule per Wesley
+   2026-11-13 - was top 30% from 2026-11-08), average them,
    x 7 = weekly units average.
 6. Stores with no own history - matched stores, rank-57 no-sales stores, and 479 Brandon (until end of
    May 2027) - stay in their group but are left out of the average.
@@ -211,8 +219,57 @@ Per (period, DPS code), using the ranking for that period x the DCS group the DP
    (A1, A2, A3, B, C, D, E).
 
 First run: Holidays only, DPS code `JE WO NK/10-13/No` only.
-Later: DPS codes with no sales history get values from a rule still to define (higher price ->
-fewer units).
+
+### Step 2c - Benchmark method (per Wesley 2026-11-13, permanent)
+Replaces the anchored rule and Step 2d below. Full table (`build-all-dps.js`), per DCS/size:
+1. **Benchmark** = the price bucket with the most store x item pairs (all groups together), among
+   buckets where at least one group has >= 10 pairs. Its group values are the calculated ones (Step 2b).
+   Example: JE WO NK -> 10-13 (19,166 pairs), 13/11/10/9/7/6/5.
+2. **Benchmark order:** E <= D <= C <= B <= A3 <= A2 <= A1 (pairs-weighted average where broken, round
+   up), then the order rules of its price tier (below; tier 1 = Wesley's benchmark rule A2 > B, B > D).
+   Adjusted before anything is derived from it.
+3. **Other buckets:** qty = ROUNDUP(benchmark group qty x slope), minimum 1. Slope = average of the
+   ladder ratios (bucket / benchmark bucket) for A1, A2, A3 and B, from Wesley's Holidays table
+   `assets/DPS code and group allocation - Holidays ladder (2026-11-12).xlsx` - one slope per bucket for
+   all groups, so the benchmark's group spread is kept at every price.
+4. **Order rules by price tier** - always E <= D <= C <= B <= A3 <= A2 <= A1, plus:
+
+   | Price buckets | Strict | Fix |
+   |---|---|---|
+   | up to 46-51 (incl. benchmark rule) | A2 > B, B > D | decrease D and E if possible, else increase B |
+   | 51-56 to 91-101 | A3 > C, B > D | decrease D and E if possible, else increase B |
+   | 101-150 to 250-300 | A3 > C, B > C | decrease C, D and E if possible, else increase B |
+   | 300-350 and up | A3 > B | decrease B, C, D and E if possible, else increase A3 |
+
+   Decrease = lower group set to (higher group - 1), minimum 1, and the groups below it lowered to keep
+   the order. Increase = named group raised (and the groups above it, to keep the order).
+5. **No benchmark** (no bucket with >= 10 pairs in any group for that DCS/size): ladder values as-is,
+   then the tier rules.
+6. Ladder used: the DCS/size's own ladder; CL ME uses the matching CL WO ladder; others not in the
+   table use the standard ladder (`JE WO NK/No`). Sized rows outside CL are ignored.
+
+**Open questions / placeholders (flag to Wesley):**
+- A benchmark group with < 10 pairs is filled: ladder benchmark value x the pairs-weighted ratio
+  (calculated / ladder) of the benchmark's other groups. 189 such cells in the first Holidays run
+  (mostly CL sizes).
+- When "increase B" can't fix a pair because B is the lower one (A2 > B in tier 1 with B not
+  decreasable), A2 is raised instead (first hit: a benchmark at 13/7/7/7/5/5/5).
+- The benchmark uses the rules of its own price tier (a benchmark above 51 would not get A2 > B / B > D).
+- **Price order** (per Wesley 2026-11-13, "lower pricier bucket"): after the tier rules, going from the
+  cheapest bucket up, a cell above the same group in the next cheaper bucket is lowered to it. First
+  Holidays run: 113 DPS codes lowered. If the lowering breaks a tier strict rule (A3 = C at 51-56 when the
+  cheaper 46-51 has A3 = C), the lower group is decreased to (higher - 1), min 1, with the groups below it
+  (per Wesley 2026-11-13, "decrease C there"; tier 2 otherwise doesn't decrease C). 13 CL codes at 51-56
+  (C down by 1), e.g. CL WO DR/51-56/2X 13/6/4/4/4/3/3 -> 13/6/4/4/3/3/3; the pricier buckets follow.
+  The build now stops if the group order or the price order is broken anywhere.
+- The ladder table is Holidays-only; other periods use the same slopes until Wesley says otherwise.
+
+### Superseded 2026-11-13: anchored rule (old Step 2c) and Step 2d
+- Anchored rule (2026-11-12): a group with no calculated value used the nearest calculated bucket x the
+  ladder's A1 slope; DCS/sizes with nothing calculated used the ladder as-is.
+- Step 2d (2026-11-12/13): minimum 10 pairs per cell, then order by lowering caps, then raising, then
+  pairs-weighted averaging + strict raise. Dropped because single cells (thin or outlier) kept moving
+  their neighbours; the benchmark method uses one well-supported bucket per DCS/size instead.
 
 Data found 2026-11-07 (`EBT.dbo.[Store Directory]`, open = non-blank `WStoreType`): 140 open incl.
 470 Ecommerce (no size) -> 139 retail = 1+5+6+45+57+20+5. Has `OPEN` date, `WStoreSize`,
@@ -230,3 +287,68 @@ Data found 2026-11-07 (`EBT.dbo.[Store Directory]`, open = non-blank `WStoreType
   provisional. Only ranking change: 544 Deptford matched to 322 Myrtle Beach II instead of 436 Great
   Northern (C either way; matched stores are not in the average). Holidays rerun with the pre-opening
   fix: unchanged, 9/9/8/8/7/6/5.
+- 2026-11-12 first full Holidays build (`scripts/build-all-dps.js`, all DPS codes):
+  `Claude_results/11-12-26-DPS_Allocation_All_Holidays.xlsx`. 4,290 DPS codes (Wesley's 41 DCSs
+  minus non-CL sized rows, plus CL ME x 5 and AS BT MI). Cells: 7,328 calculated, 12,142 anchored,
+  10,560 ladder as-is. JE WO NK/10-13/No = 9/9/8/8/7/6/5 (same as the single-code build).
+  **Open issue - thin data:** 876 calculated cells come from 1 store x item pair, 567 from 2. A single
+  1-unit sale gives qty 3, a single strong pair can give 174 (AC RB/1-3 A1). Result: in 2,091 of 4,290
+  rows a lower store group gets more than the group above, and 2,006 cells rise with price (1,913 of
+  them between two calculated cells). Compared with Wesley's table (same DPS codes), A1 is ~0.6x,
+  A2/A3 ~1x, B ~1.3x, C-E ~1.5x on the median. Needs a decision before this table is used.
+- 2026-11-12 Holidays with Step 2d (min 10 pairs + order caps):
+  `Claude_results/11-12-26-DPS_Allocation_All_Holidays_min10_order.xlsx`. Cells: 3,991 calculated,
+  10,769 anchored (3,337 had sales but < 10 pairs), 15,270 ladder as-is (mostly CL sizes; A1 3,000 and
+  E 2,940 because A1 is one store and E five). Caps lowered 8,739 of 30,030 cells (2,743 by half or more);
+  2,731 cells sit at 1 above a strict cap. JE WO NK/10-13/No 9/9/8/8/7/6/5 -> 7/7/7/6/6/5/5 (A1 capped by
+  its 7-10 bucket = 7). **Side effect of the price cap:** one low cheaper bucket caps every pricier bucket
+  above it - AC RB/0-1 B = 5 (15 pairs) pulls AC RB B to 5 at every price (1-3 was 42, 3-5 was 64), and
+  the group caps then pull C-E down too. The 0-1 bucket is mostly items sold at clearance/promo prices
+  (bucket = actual sale price). Waiting on Wesley.
+- 2026-11-13 Holidays with Step 2d, order by raising:
+  `Claude_results/11-13-26-DPS_Allocation_All_Holidays_min10_raise.xlsx`. 12,440 of 30,030 cells raised
+  (3,063 doubled or more). JE WO NK/10-13/No = 13/13/9/9/9/7/6. **Same problem mirrored:** one high
+  pricier cell lifts every cheaper bucket - JE WO NK/21-26 A2 = 13 (35 pairs; neighbors 7-9) sets A2 = 13
+  for every bucket from 0-1 to 21-26. Totals vs Wesley's table (his DPS codes): A1 +4%, A2 +41%, A3 +36%,
+  B +51%, C +41%, D +51%, E +33%. Waiting on Wesley.
+- 2026-11-13 Holidays with Step 2d, order by pairs-weighted averaging:
+  `Claude_results/11-13-26-DPS_Allocation_All_Holidays_min10_avg.xlsx`. 6,027 cells changed by the
+  averaging (4,162 up, 1,865 down; 54 fit passes), then 8,628 raised by the strict A2 > B / B > D rule.
+  JE WO NK/10-13/No back to 9/9/8/8/7/6/5; JE WO NK/21-26 A2 13 -> 8. Totals vs Wesley's table: A1 -2%,
+  A2 +30%, A3 +24%, B +39%, C +29%, D +39%, E +28%. **Open - strict rule:** 1,448 of Wesley's 2,910
+  rows break his own A2 > B / B > D (e.g. his 101+ ladder 2/2/2/2/1/1/1), so with D >= 1 the rule forces
+  B >= 2 and A2/A1 >= 3 everywhere. Those raises add A1 +1,653, A2 +2,834, A3 +1,102, B +1,538 units
+  (most of the A1-B gap; 3,659 on anchored and 2,979 on ladder cells, 489 on calculated). Waiting on
+  Wesley: keep the strict rule, apply it only where values are large enough, or drop it.
+- 2026-11-13 JE WO NK/10-13/No Holidays with the best 7-day window (`build-dps-table.js`):
+  `Claude_results/11-13-26-DPS_Allocation_JE_WO_NK_10-13_No_Holidays_best7day.xlsx`.
+  9/9/8/8/7/6/5 -> **16/14/12/11/9/8/6** (A1 0.407 -> 0.744/day, B 0.348 -> 0.496, C 0.305 -> 0.396).
+  Same pairs (B 6,648, C 7,784). Because every window is divided by 7, a pair's daily = best-week units
+  / 7, so values are steps of 1/7: in B 49% of pairs sold 1 unit in their best week and 28% sold 2;
+  the top-30% cut falls inside the 2-unit tie (483 of 1,872 kept, by store rank then item number).
+  In C the cut is also at 2 units (1,212 of 2,023 kept).
+- 2026-11-13 same, top 50% instead of 30% (test, `--keep 50`):
+  `Claude_results/11-13-26-DPS_Allocation_JE_WO_NK_10-13_No_Holidays_best7day_top50.xlsx`.
+  **13/11/10/9/7/6/5** (top 30% gave 16/14/12/11/9/8/6). B cut still inside the 2-unit tier (no 1-unit
+  pairs kept); C keeps all 3,147 pairs with 2+ units plus 745 of its 4,637 1-unit pairs.
+- 2026-11-13 JE WO NK/10-13/No Summer 2 (fiscal weeks 21-28; 2023 5/21-7/15, 2024 5/19-7/13,
+  2025 5/18-7/12), best 7-day window: top 50% **13/11/9/7/6/5/5**, top 30% **17/14/10/8/7/6/6**.
+  `Claude_results/11-13-26-DPS_Allocation_JE_WO_NK_10-13_No_Summer2_best7day_top50.xlsx` / `_top30.xlsx`.
+- 2026-11-13 **full Holidays table with the current rule** (best 7-day window + top 50%, Step 2c, Step 2d
+  min 10 pairs + pairs-weighted averaging + strict raise):
+  `Claude_results/11-13-26-DPS_Allocation_All_Holidays_best7day_top50.xlsx`. Calculated JE WO NK/10-13 =
+  13/11/10/9/7/6/5 (same as the single-code run); after Step 2d **12/10/9/8/7/6/5**, because the cheaper
+  5-7 bucket comes out lower (9/7/7/6/6/5/5, B 1,935 pairs) and a cheaper bucket can't be below a pricier
+  one, so 5-7 to 10-13 are averaged. JE WO NK/21-26 A2 = 16 (only 6 A1 pairs, outlier) averaged down to 8.
+  5,287 cells averaged (3,717 up, 1,570 down), 8,331 raised by the strict A2 > B / B > D rule. Totals vs
+  Wesley's table: A1 +8%, A2 +39%, A3 +33%, B +47%, C +34%, D +40%, E +28%.
+- 2026-11-13 **full Holidays table, permanent rule** (best 7-day window + top 50%, benchmark method + tier
+  order rules): `Claude_results/11-13-26-DPS_Allocation_All_Holidays_benchmark.xlsx`. 143 DCS/size: 95 with a
+  benchmark (Benchmarks tab), 48 ladder only (CL sizes). JE WO NK = the test table (10-13 13/11/10/9/7/6/5,
+  0-1 29/24/22/20/16/14/11, 81-91 3/3/3/3/2/2/1, 101-150 3/3/2/2/1/1/1, >=500 2/2/2/1/1/1/1). 1,832 DPS codes
+  adjusted by tier rules; 44 price-order breaks at tier boundaries (reported). Totals vs Wesley's table:
+  A1 +39%, A2 +51%, A3 +50%, B +60%, C +51%, D +50%, E +55%.
+- 2026-11-13 rerun with price order forced by lowering the pricier bucket (same file): 113 DPS codes
+  lowered, JE WO NK unchanged; 29 CL codes (51-56 to 76-81) end with A3 = C (tier 2 rule A3 > C broken).
+- 2026-11-13 rerun with "decrease C" after the price order (same file): 13 CL codes at 51-56 had C lowered
+  by 1; no tier rule, group order or price order broken anywhere. JE WO NK unchanged.

@@ -685,3 +685,23 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
 - DPS group allocation project: Summer 1 (JE WO NK/10-13/No) rerun from SAP - 10/8/8/7/6/5/5, no
   longer provisional. `build-dps-table.js` now ignores pre-opening sales rows when deciding whether a
   new store has sales (547 Grand Junction). Details in the project's `docs/progress-log.md`.
+- DPS group allocation project: no-history rule settled (anchored on calculated buckets, price slope
+  from Wesley's Holidays ladder). See the project's `docs/business-rules.md` Step 2c.
+- DPS group allocation project: full Holidays table built (`build-all-dps.js`, 4,290 DPS codes); thin-data
+  issue to settle with Wesley before use.
+- DPS group allocation project: min-10-pairs + order caps tried on the full Holidays table; price cap side
+  effect to settle with Wesley.
+
+## 2026-11-13
+- DPS group allocation project: order rules switched to raising; one outlier still dominates (now
+  upward). Averaging option put to Wesley.
+- DPS group allocation project: order rules now average conflicting cells (weighted by pairs); outlier
+  issue fixed. Strict A2 > B / B > D rule is the main remaining gap vs Wesley's table - put to Wesley.
+- DPS group allocation project: pair daily units now = best 7-day window (per Wesley); JE WO NK/10-13
+  Holidays -> 16/14/12/11/9/8/6. Full-table builder not switched yet.
+- DPS group allocation project: rule is now best 7-day window + top 50%; full Holidays table rebuilt
+  (JE WO NK/10-13 12/10/9/8/7/6/5 after the order step).
+- DPS group allocation project: benchmark method + tiered order rules made permanent; full Holidays table
+  rebuilt (`11-13-26-DPS_Allocation_All_Holidays_benchmark.xlsx`).
+- DPS group allocation project: price order forced (pricier bucket lowered, then C decreased where the
+  tier rule needs it); full Holidays table now meets every order rule.
