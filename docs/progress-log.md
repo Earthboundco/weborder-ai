@@ -705,3 +705,20 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   rebuilt (`11-13-26-DPS_Allocation_All_Holidays_benchmark.xlsx`).
 - DPS group allocation project: price order forced (pricier bucket lowered, then C decreased where the
   tier rule needs it); full Holidays table now meets every order rule.
+
+## 2026-11-15
+
+- Wesley pasted his Power BI DAX for the DPS Code. Saved as `dps-code.js` (documented in
+  `docs/business-rules.md`, "DPS Code formula"). Checked against live SAP for the 533 items:
+  487 match; the 46 differences are all price drift (SAP current sale price vs the 10-11 file) -
+  every unchanged-price item matches, including S/M -> M and L/XL -> L. New
+  `scripts/compare-dps-code.js`. Item info is still read from the assets file; SAP-sourced item info
+  not wired in yet (open: which price to use).
+- **Item info now built from SAP (Wesley, 2026-11-15):** tested on a 997-item list - SAP +
+  `dps-code.js` reproduced his Excel file in all 13 columns. New
+  `scripts/import-item-information-from-sap.js [--dry-run]` loads `Item_Information_Complete_for_Replenishment`
+  for the items in `ItemReplenishment` (run after the Items_for_Replenishment import); the Excel file
+  is no longer a weekly input (old script kept as manual fallback). Loaded once live: 533 items, no
+  warnings. vs the 10-11 Excel data: status changed on 89 items, price on 47 (DPS on 46), markdown flag
+  on 42 - SAP drift since 10-11, so rerunning the 10-11 allocation now would give slightly different
+  results. Weekly inputs are now 8 files.

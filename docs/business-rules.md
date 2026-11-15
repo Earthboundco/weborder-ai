@@ -304,6 +304,30 @@ Wesley runs the process day to day is still CLI scripts, unchanged):
 Both scripts take an optional output path argument (default to the file names above in the
 current directory) and are gitignored as generated output, not source data.
 
+## DPS Code formula (saved 2026-11-15, from Wesley's Power BI DAX)
+
+DPS Code = `DCS_Code & "/" & Price Adjusted & "/" & Size Adjusted`. The formula lives in code in
+**`dps-code.js`** (project root: `dpsCode(dcs, salePrice, size)`, plus `priceAdjusted`/`sizeAdjusted`)
+- that file is the single source; update it (and this section) if the DAX changes. Wesley pasted the
+DAX in chat; it is more complete than the old EBT `ItemInformationComplete` view's logic.
+
+- **Price Adjusted:** buckets on SalePrice, strict `>`, first match from the top: >500 `>=500`, >400
+  `400-500`, >350, >300, >250, >200, >150 `150-200`, **>101** `101-150`, >91 `91-101`, >81, >76, >71, >66,
+  >61, >56, >51, >46, >41, >36, >31, >26, >21, >17, >13, >10, >7, >5, >3, >1 `1-3`, else `0-1`. (Note the
+  101 threshold, not 100: a price of exactly 101 is `91-101`.)
+- **Size Adjusted:** only for clothing (DCS starts with `CL`), otherwise `No`. Case-insensitive.
+  XS = XS/XSM; S = S/SM/XS/S; M = M/MD/25-31/REG/S/M/L/**S/M**/M/L; L = L/LG/32-42/70 IN/**L/XL**;
+  XL = XL/XLG; 2X = XXL/2XL/2X/XL/XXL/2XL/XXL/XL/2X; 3X = 3X/3XL; 4X = 4X/4XL; blank/(blank)/O/S/OS =
+  `No`; any other clothing size passes through unchanged. This is what resolves combined sizes:
+  `S/M` -> M and `L/XL` -> L (items 81351/81352 -> `.../M`, `.../L`, exactly what the file had).
+- **Validation (2026-11-15):** computed from live SAP (`REPORTUSER.SAP_Item_Information` DCS, Sale
+  Price, Size) for the 533 items vs the file: all 486 items whose price is unchanged match 100%, so
+  the formula/size logic is right. The other 46 differ only because SAP's *current* sale price moved
+  since the file was built 10-11 (markdowns, e.g. 59.95 -> 41.97), changing the price bucket. A DPS
+  code computed live therefore follows markdowns; the file freezes the price at refresh time.
+  `scripts/compare-dps-code.js` reproduces the check (writes `Claude_results/<date>-DPS_Code_Check.csv`).
+- **Wired into the weekly run (2026-11-15):** `scripts/import-item-information-from-sap.js` builds the item table from SAP with this formula; the price used is SAP's *current* sale price (Wesley's file did the same - verified 997/997), so DPS codes follow markdowns.
+
 ## Qty Needed / ETA-LTD - moved to 1pct-average-calc
 
 The ETA/LTD, weekly qty projection and Qty Needed rules (and `scripts/qty-needed.js`) now live in
