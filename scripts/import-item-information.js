@@ -1,4 +1,5 @@
-// Imports assets/Item_Information_Complete_for_Replenishment.xlsx into
+// MANUAL FALLBACK (since 2026-11-15 the weekly run uses import-item-information-from-sap.js and the
+// assets/ Excel file was deleted). Imports an Item_Information_Complete_for_Replenishment-layout xlsx into
 // Item_Information_Complete_for_Replenishment (truncate + reload). As of 2026-10-11 this file is the
 // ONLY source of item attributes (DCS, description, case qty, flags, DPS Code) - the EBT-derived
 // ItemInformationComplete view is no longer used (see sql/017).

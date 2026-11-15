@@ -1,9 +1,10 @@
 // Computes each item's DPS Code from live SAP item data using dps-code.js (Wesley's DAX formula)
-// and compares it with the DPS Code in assets/Item_Information_Complete_for_Replenishment.xlsx.
+// and compares it with the DPS Code in a file with the Item_Information_Complete_for_Replenishment layout
+// (the assets/ copy was deleted 2026-11-15 once item info came from SAP - pass any file with that layout).
 // Read-only: touches no database tables, writes only the CSV.
 //
-// Usage: node scripts/compare-dps-code.js [xlsx] [output.csv]
-// Defaults: the assets file above; Claude_results/<MM-DD-YY>-DPS_Code_Check.csv (all items, with a
+// Usage: node scripts/compare-dps-code.js <xlsx> [output.csv]
+// Default output: Claude_results/<MM-DD-YY>-DPS_Code_Check.csv (all items, with a
 // Match column, so Wesley can filter the differences).
 const fs = require('fs');
 const path = require('path');
@@ -23,7 +24,11 @@ const csv = v => {
 };
 
 async function main() {
-  const xlsx = path.resolve(process.argv[2] || 'assets/Item_Information_Complete_for_Replenishment.xlsx');
+  if (!process.argv[2]) {
+    console.error('Usage: node scripts/compare-dps-code.js <xlsx> [output.csv]');
+    process.exit(1);
+  }
+  const xlsx = path.resolve(process.argv[2]);
   const outDir = path.resolve('Claude_results');
   fs.mkdirSync(outDir, { recursive: true });
   const outPath = path.resolve(process.argv[3] || path.join(outDir, `${todayDateStr()}-DPS_Code_Check.csv`));

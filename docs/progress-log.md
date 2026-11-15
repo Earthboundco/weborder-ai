@@ -722,3 +722,4 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   warnings. vs the 10-11 Excel data: status changed on 89 items, price on 47 (DPS on 46), markdown flag
   on 42 - SAP drift since 10-11, so rerunning the 10-11 allocation now would give slightly different
   results. Weekly inputs are now 8 files.
+- Deleted `assets/Item_Information_Complete_for_Replenishment.xlsx` (no longer an input; still in git history). `compare-dps-code.js` now takes the xlsx path as an argument; `import-item-information.js` documented as a manual fallback.
