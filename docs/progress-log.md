@@ -723,3 +723,18 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   on 42 - SAP drift since 10-11, so rerunning the 10-11 allocation now would give slightly different
   results. Weekly inputs are now 8 files.
 - Deleted `assets/Item_Information_Complete_for_Replenishment.xlsx` (no longer an input; still in git history). `compare-dps-code.js` now takes the xlsx path as an argument; `import-item-information.js` documented as a manual fallback.
+
+## 2026-11-15 (allocation run)
+
+- Weekly refresh, 997 items (up from 533), 8 weekly inputs (item info built from SAP). Ran
+  `usp_RunAllocation` (~34s): 143,568 rows, 9,047 blocked, 92,471 units, 23,943 ship lines. Store 470
+  request file was all zeros (clears the table - `import-ecommerce-allocation.js` fixed to do that
+  instead of aborting and leaving last week's 25 requests behind).
+- Compared with Wesley's manual grid (`11-15-26_WO_Final_V1_allocation_to_compare.xlsx`, unpivoted to
+  `_long.csv`): **44 discrepancies** of ~23.9k lines. 7 = known DC-boundary pattern (Wes ships the raw
+  leftover < case: 20841, 97566, 98546, 98410, 16472, 97653, 99069). The other 37 = one cause: Wes
+  serves stores **513** (D, rank 114) and **479** (C, rank 58) ahead of stores we rank higher
+  (14 items for 513, 3 for 479). In `Pattern_Store_Group`, 479/513/547 are the only stores with the
+  SAME rank in all 11 patterns (58/114/139) - possible placeholders. Moving 513 to ~rank 50 in a
+  simulation cuts the discrepancies 44 -> 13. Open question to Wesley: how should 513/479/547 rank?
+- Wesley then supplied `NewAllocation.xlsx` (re-done manual allocation; 140 stores x 997 items, 23,950 lines, 92,515 units). Compared with our 11-15 run: **7 discrepancies**, all the known DC-boundary pattern (Wes ships the raw leftover < case: 20841, 97566, 98546, 98410, 16472, 97653, 99069). The 37 rows tied to stores 513/479 now match. Saved as `Claude_results/11-15-26-Discrepancies_Check_NewAllocation.csv`; no pipeline change was needed.

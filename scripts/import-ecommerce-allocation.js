@@ -35,12 +35,15 @@ async function main() {
 
   const rows = [];
   let badStoreRows = 0;
+  let fileItemRows = 0; // item rows with a numeric qty, including zeros
   sheet.eachRow((row, rowNumber) => {
     if (rowNumber === 1) return;
     const store = row.getCell(storeCol).value;
     const itemCode = row.getCell(itemCol).value;
     const qty = row.getCell(qtyCol).value;
-    if (typeof itemCode !== 'number' || typeof qty !== 'number' || qty <= 0) return;
+    if (typeof itemCode !== 'number' || typeof qty !== 'number') return;
+    fileItemRows++;
+    if (qty <= 0) return;
     if (String(store) !== '470') { badStoreRows++; return; }
     rows.push({ itemCode: String(itemCode), qty });
   });
@@ -50,9 +53,14 @@ async function main() {
     process.exit(1);
   }
 
-  if (!rows.length) {
+  if (!fileItemRows) {
     console.error('No item rows parsed from sheet - aborting without touching the table.');
     process.exit(1);
+  }
+  // A file whose quantities are all 0 is a valid "no Ecommerce requests this week" file (found 2026-11-15):
+  // the table must still be cleared, otherwise last week's requests silently ship to 470.
+  if (!rows.length) {
+    console.warn(`WARNING: all ${fileItemRows} item rows have Qty 0 - clearing EcommerceAllocationRequest (store 470 will get 0 for every item). Check this is intended.`);
   }
 
   const pool = await getPool();
