@@ -750,3 +750,20 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
 - Simplified explanation workbook for item 91279 only: `Claude_results/11-15-26-Markdown_Push_91279_Simple.xlsx` (plain-words sheet with the base reached by each group, base round by round, store detail). Matches the push CSV exactly.
 - **Markdown push steps changed (Wesley, 2026-11-15):** target raised per round by A1 +2, A2 +2, A3 +2, B +2, C +1 units (was +3/+3/+3/+2/+1) in `scripts/push-markdown-leftover.js`. Re-run on 11-15 data: 703 rows, 1,753 units, all 12 items placed. 91279: 7 rounds, 72 stores; average push per store A1 14, A2 8, A3 6.6, B 6.1, C 0.8. Simple 91279 explanation workbook regenerated (`Claude_results/11-15-26-Markdown_Push_91279_Simple.xlsx`).
 - **Sales-based top-up built and applied (Wesley, 2026-11-15):** `scripts/sales-topup.js`. SuggestedBase = plain last-3-weeks sales per item/store combo (only where > base); leftover after Step 1 and the markdown push is given best rank -> worst, each store topped up to its SuggestedBase net of on-hand + in-transit + earlier shipments, whole cases (partial in whole cases), blockings kept, 470 excluded. 11-15 result: 751 items had leftover; 275 combos flagged, 122 topped up (448 units, 67 items; 153 flagged combos already held enough stock; DC ran out on only 2 items). Combined file (Step 1 + markdown push + top-up): 24,100 lines, 94,672 units, $1,948,793.77 at current sale price. New `scripts/allocation-totals.js` gives total qty and value (Wesley wants both reported after every run).
+
+## 2026-11-16 - CL On-order / Received $ at landed cost
+
+- New `scripts/OnOrder and Rcvd/fill-onorder-rcvd.js`: fills the `<date>-CL_OnOrder_and_Rcvd.xlsx`
+  workbook from the `onorderandrcvdmonth.csv` export. $ = qty x SAP LCost (`LCO`); row = item's SAP
+  DCS Code, column = arrival month (`M10Y26` -> "Oct - 2026"). "On Order Inventory Units" go to the
+  on-order block (C5:O11), "Received Inventory Units" to the received block (C15:O21), matching the
+  workbook headings. Lists anything it can't place (DCS not on the sheet, month outside the columns,
+  item missing from SAP / no LCost). 11-16 run: on-order $1,767,094.92, received $3,013,947.19.
+- **Landed cost estimate rule added (Wesley, 2026-11-16):** for items with no SAP `LCO` (blank or 0, common for new
+  items) the script now estimates landed cost from `ItemCost`, using the vendor of the item's latest non-cancelled
+  PO (`OPOR`/`POR1`): domestic x 1.05, international x (1 + PER_DCS from
+  `Open-to-buy/assets/EST_ DCS_Landed_Percentage.xlsx`). Unknown vendor type or a DCS missing from that file -> item
+  left out and listed. Output splits each total into real SAP LCO vs estimated. Refilled 11-16 workbook: on-order
+  $5,296,052.27 ($1,851,594.42 SAP LCO + $3,444,457.85 estimated), received $3,013,947.19 (all SAP LCO); no CL
+  item left out. SAP LCO is live: CL WO DR Nov on-order at SAP LCO rose from $77,899 to $130,621 between the
+  morning and afternoon runs as real landed costs were entered.
