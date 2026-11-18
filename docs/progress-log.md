@@ -767,3 +767,17 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   $5,296,052.27 ($1,851,594.42 SAP LCO + $3,444,457.85 estimated), received $3,013,947.19 (all SAP LCO); no CL
   item left out. SAP LCO is live: CL WO DR Nov on-order at SAP LCO rose from $77,899 to $130,621 between the
   morning and afternoon runs as real landed costs were entered.
+
+## 2026-11-18 - West Coast clothing: initial allocation weeks of supply
+
+- New `scripts/West Coast clothing review/initial-allocation-wos.js` (for Will Ables' question on
+  West Coast clothing availability). Per item/store combo for launch code "26 Fall Fashion",
+  Clothing, at 12 western stores (420, 438, 442, 444, 445, 447, 450, 454, 495, 526, 531, 545):
+  first DC receipt date + initial qty from `EARTHBOUND.OINM` (TransType 67, Ref2 ITR/HDQ, all
+  postings on the first date summed), salesfact sales in weeks 1-4 from that date, avg weekly
+  sales, weeks of supply = initial qty / avg weekly sales (flag < 4), extra DC units days 1-55.
+  Output to Desktop\Claude files (`West_Coast_Clothing_26_Fall_Fashion_Initial_WOS_<date>.xlsx`).
+- 11-18 result: 283 items, 3,396 combos received, 3,152 with 4 full weeks. Only 62 (2%) under 4
+  weeks of supply, and all but one of those got more DC units within 8 weeks. Store-level initial
+  weeks of supply 7.9 (444 Vancouver) to 15.2 (447 NorthTown); 1,330 combos (42%) sold nothing in
+  4 weeks. Initial qty per item (= per size) is small: 1-2 units on ~51% of combos.
