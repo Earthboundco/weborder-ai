@@ -13,7 +13,7 @@
 //      (EARTHBOUND.OPOR/POR1, CANCELED = 'N'; latest DocDate, then DocEntry), VendorType from
 //      REPORTUSER.SAP_BP_MASTER_DATA on SAP_VendorCode = OPOR.CardCode:
 //        'D' -> ItemCost x 1.05        'I' -> ItemCost x (1 + PER_DCS)
-//      PER_DCS from Open-to-buy/assets/EST_ DCS_Landed_Percentage.xlsx (A = DCS_Code, B = fraction).
+//      PER_DCS from Open-to-buy/assets/EST_DCS_Landed_Percentage.xlsx (A = DCS_Code, B = fraction).
 //   3. Vendor type unknown, no PO, no ItemCost, or DCS missing from the PER_DCS file -> item left
 //      out and listed (no guessing).
 //   Totals are reported split into real SAP LCO vs estimated, since estimates change once SAP has LCO.
@@ -28,7 +28,7 @@ const ExcelJS = require('exceljs');
 const { loadItemInfo } = require('../../item-info');
 const { hanaQuery, closeHana } = require('../../hana');
 
-const PER_DCS_FILE = path.resolve(__dirname, '../../../Open-to-buy/assets/EST_ DCS_Landed_Percentage.xlsx');
+const PER_DCS_FILE = path.resolve(__dirname, '../../../Open-to-buy/assets/EST_DCS_Landed_Percentage.xlsx');
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const SECTIONS = {
   'On Order Inventory Units': { short: 'On', header: 4, first: 5, last: 11 },
