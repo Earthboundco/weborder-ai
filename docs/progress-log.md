@@ -781,3 +781,9 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   weeks of supply, and all but one of those got more DC units within 8 weeks. Store-level initial
   weeks of supply 7.9 (444 Vancouver) to 15.2 (447 NorthTown); 1,330 combos (42%) sold nothing in
   4 weeks. Initial qty per item (= per size) is small: 1-2 units on ~51% of combos.
+
+## 2026-11-24 - CL On-order / Received workbook retired
+
+- Wesley no longer uses the `<date>-CL_OnOrder_and_Rcvd.xlsx` workbooks, so `scripts/OnOrder and Rcvd/fill-onorder-rcvd.js`
+  (the only code that filled them) was removed. The landed cost estimate rule it used lives on in Open-to-buy
+  `refresh-pos.js` / `business-rules.md`. The workbooks in Desktop\Claude files\Sunny IBM email were left in place.
