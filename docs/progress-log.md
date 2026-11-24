@@ -781,6 +781,16 @@ just query the existing loaded set/`AllocationResults` filtered to one item).
   weeks of supply, and all but one of those got more DC units within 8 weeks. Store-level initial
   weeks of supply 7.9 (444 Vancouver) to 15.2 (447 NorthTown); 1,330 combos (42%) sold nothing in
   4 weeks. Initial qty per item (= per size) is small: 1-2 units on ~51% of combos.
+- New `scripts/West Coast clothing review/clearance-company-comparison.js`: clothing clearance
+  penetration (units, $, share of sales, by launch year), inventory availability (items in stock,
+  weeks of supply, full-price weeks of supply, clothing sales rank) and 26 Fall Fashion full-price
+  sell-through for the same 12 stores vs the company average (139 open stores) and size-tier
+  averages. Clearance = Sales_Inventory_analysis "discounted item" rule (>5% off retail AND EBT
+  Markdwn = Y); sales = last 4 complete weeks; clearance-sales share uses current status. Output
+  `West_Coast_Clothing_Clearance_and_Company_Comparison_<date>.xlsx` in Desktop\Claude files.
+- 11-18 result: 12 stores vs company - clothing clearance $ 26% vs 24% (4-Avg tier 26%), clothing
+  weeks of supply 17.0 vs 17.3, items in stock 812 vs 781, 26 Fall Fashion 4-week full-price
+  sell-through 36% vs 37%. ~80% of clothing clearance units everywhere are 2026 launches.
 
 ## 2026-11-24 - CL On-order / Received workbook retired
 
